@@ -103,8 +103,6 @@ This project is open-source and available under the **MIT License**.
 ---
 
 ## 📧 Contact
-For any questions or suggestions, feel free to open an issue or contact the repository owner.
-
-Happy coding! 🎉
+For any questions or suggestions, feel free to open an issue or contact pavitgo5@gmail.com
 
 
