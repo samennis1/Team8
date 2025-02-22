@@ -9,8 +9,8 @@ const items = [
     image:
       'https://media.donedeal.ie/eyJidWNrZXQiOiJkb25lZGVhbC5pZS1waG90b3MiLCJlZGl0cyI6eyJ0b0Zvcm1hdCI6IndlYnAiLCJyZXNpemUiOnsiZml0IjoiaW5zaWRlIiwid2lkdGgiOjEyMDAsImhlaWdodCI6MTIwMH19LCJrZXkiOiJwaG90b18zMzYwNjU2NzEifQ==?signature=1f9a02c1ba3f29c95f6d3bff52a409f32232178f70d8b30d299e6f2cab636d68',
     description: 'High-performance Macbook Pro in pristine condition.',
-    price: '$1,200',
-    location: 'New York, NY',
+    price: '€1,200',
+    location: 'Cork, County Cork',
   },
   {
     id: '2',
@@ -18,8 +18,8 @@ const items = [
     image:
       'https://images.pexels.com/photos/18525574/pexels-photo-18525574/free-photo-of-unboxing-iphone-15-pro-max-box-in-natural-titanium-color-mention-zana_qaradaghy-on-instagram-while-use-this-photo-follow-on-instagram-zana_qaradaghy.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
     description: 'Quite well worn with a damaged screen.',
-    price: '$999',
-    location: 'San Francisco, CA',
+    price: '€999',
+    location: 'Rathmines, Dublin, Co. Dublin',
   },
   {
     id: '3',
@@ -27,8 +27,8 @@ const items = [
     image:
       'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fcdn.mos.cms.futurecdn.net%2Feb5AQgQnapgFNMk5Fe5EJ9.jpg&f=1&nofb=1&ipt=1a061fa817ba1c6d8c7998a14f18466565b4ad90ad7ad01261aa54b1dcabae23&ipo=images',
     description: 'A great phone I only used a few times.',
-    price: '$700',
-    location: 'Los Angeles, CA',
+    price: '€700',
+    location: 'Galway, Co. Galway',
   },
 ];
 

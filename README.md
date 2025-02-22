@@ -89,7 +89,7 @@ Team8/
 ---
 
 ## 📝 Contribution
-1. Fork the repository 🍴
+1. Fork the repository to your one 🍴
 2. Create a new branch (`git checkout -b feature-name`)
 3. Commit changes (`git commit -m "Added new feature"`)
 4. Push to your branch (`git push origin feature-name`)
@@ -103,8 +103,6 @@ This project is open-source and available under the **MIT License**.
 ---
 
 ## 📧 Contact
-For any questions or suggestions, feel free to open an issue or contact the repository owner.
-
-Happy coding! 🎉
+For any questions or suggestions, feel free to open an issue or contact pavitgo5@gmail.com
 
 
