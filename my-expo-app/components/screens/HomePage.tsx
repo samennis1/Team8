@@ -4,10 +4,14 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const items = [
-  { id: '1', title: 'Vintage Chair', image: 'https://source.unsplash.com/random/200x200?chair' },
+  {
+    id: '1',
+    title: 'Macbook Pro 2021',
+    image:
+      'https://media.donedeal.ie/eyJidWNrZXQiOiJkb25lZGVhbC5pZS1waG90b3MiLCJlZGl0cyI6eyJ0b0Zvcm1hdCI6IndlYnAiLCJyZXNpemUiOnsiZml0IjoiaW5zaWRlIiwid2lkdGgiOjEyMDAsImhlaWdodCI6MTIwMH19LCJrZXkiOiJwaG90b18zMzYwNjU2NzEifQ==?signature=1f9a02c1ba3f29c95f6d3bff52a409f32232178f70d8b30d299e6f2cab636d68',
+  },
   { id: '2', title: 'Antique Lamp', image: 'https://source.unsplash.com/random/200x200?lamp' },
   { id: '3', title: 'Used Bike', image: 'https://source.unsplash.com/random/200x200?bike' },
-  // Add more items as needed
 ];
 
 const HomePage = ({ navigation }: { navigation: any }) => {
@@ -37,7 +41,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
     padding: 16,
-    marginTop: 60,
   },
   title: {
     marginBottom: 16,

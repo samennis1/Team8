@@ -4,8 +4,10 @@ import React, { useContext } from 'react';
 
 import LoginPage from './components/LoginPage';
 import ChatPage from './components/screens/ChatPage';
+import DisplayQRPage from './components/screens/DisplayQRPage';
 import HomePage from './components/screens/HomePage';
 import ProductPage from './components/screens/ProductPage';
+import ScanQRPage from './components/screens/ScanQR';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 
 const Stack = createStackNavigator();
@@ -13,14 +15,41 @@ const Stack = createStackNavigator();
 const AppNavigator = () => {
   const { user } = useContext(AuthContext);
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: '#1E90FF' },
+        headerTintColor: '#fff',
+        headerTitleStyle: { fontWeight: 'bold' },
+      }}>
       {!user ? (
         <Stack.Screen name="Login" component={LoginPage} options={{ headerShown: false }} />
       ) : (
         <>
-          <Stack.Screen name="Home" component={HomePage} options={{ headerShown: false }} />
-          <Stack.Screen name="Product" component={ProductPage} options={{ headerShown: false }} />
-          <Stack.Screen name="Chat" component={ChatPage} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="Home"
+            component={HomePage}
+            options={{ title: 'Home', headerShown: true }}
+          />
+          <Stack.Screen
+            name="Product"
+            component={ProductPage}
+            options={{ title: 'Product Details', headerShown: true }}
+          />
+          <Stack.Screen
+            name="Chat"
+            component={ChatPage}
+            options={{ title: 'Chat', headerShown: true }}
+          />
+          <Stack.Screen
+            name="ScanQR"
+            component={ScanQRPage}
+            options={{ title: 'Scan QR Code', headerShown: true }}
+          />
+          <Stack.Screen
+            name="DisplayQR"
+            component={DisplayQRPage}
+            options={{ title: 'Display QR Code', headerShown: true }}
+          />
         </>
       )}
     </Stack.Navigator>

@@ -11,7 +11,9 @@ const ProductPage = ({ route, navigation }: { route: any; navigation: any }) => 
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla ac eros eu nunc consequat
         auctor.
       </Text>
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Chat', { item })}>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate('DisplayQR', { item })}>
         <Text style={styles.buttonText}>Chat Now</Text>
       </TouchableOpacity>
     </View>
@@ -23,7 +25,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
     padding: 16,
-    marginTop: 50,
+    marginTop: 0,
     marginBottom: 50,
   },
   image: {
