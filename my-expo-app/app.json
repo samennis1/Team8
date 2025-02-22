@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "trade-sure",
-    "slug": "trade-sure",
+    "name": "my-expo-app",
+    "slug": "my-expo-app",
     "version": "1.0.0",
 
     "web": {
@@ -26,8 +26,7 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true,
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
