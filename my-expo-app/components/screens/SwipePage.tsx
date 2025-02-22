@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import Swiper from 'react-native-deck-swiper';
 
-const items = [
+const { width } = Dimensions.get('window');
+
+const deals = [
   {
     id: '1',
     title: 'Macbook Pro 2021',
@@ -26,57 +28,65 @@ const items = [
   },
 ];
 
-export default function HomePage({ navigation }: { navigation: any }) {
+export default function SwipePage({ navigation }: { navigation: any }) {
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Second Hand Items</Text>
-      <FlatList
-        data={items}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.itemContainer}
-            onPress={() => navigation.navigate('Product', { item })}>
-            <Image source={{ uri: item.image }} style={styles.image} />
-            <Text style={styles.itemTitle}>{item.title}</Text>
-          </TouchableOpacity>
+    <View style={styles.container}>
+      <Swiper
+        cards={deals}
+        renderCard={(card) => (
+          <View style={styles.card}>
+            <Image source={{ uri: card.image }} style={styles.cardImage} />
+            <Text style={styles.cardTitle}>{card.title}</Text>
+            <Text style={styles.cardDescription}>{card.description}</Text>
+          </View>
         )}
+        onSwipedRight={(cardIndex) => navigation.navigate('Product', { item: deals[cardIndex] })}
+        onSwiped={(cardIndex) => console.log('Swiped card index: ', cardIndex)}
+        onSwipedAll={() => console.log('No more cards')}
+        cardIndex={0}
+        backgroundColor="white"
+        stackSize={3}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
     padding: 16,
+    backgroundColor: 'white',
   },
-  title: {
+  card: {
+    flex: 0.75,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FFF',
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 5,
+  },
+  cardImage: {
+    width: width - 80,
+    height: 200,
+    borderRadius: 8,
     marginBottom: 16,
-    fontSize: 24,
+  },
+  cardTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
+    marginBottom: 8,
     color: '#1E90FF',
   },
-  itemContainer: {
-    marginBottom: 16,
-    backgroundColor: '#F8F8F8',
-    padding: 12,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  image: {
-    height: 200,
-    width: '100%',
-    borderRadius: 8,
-  },
-  itemTitle: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '600',
+  cardDescription: {
+    fontSize: 16,
+    color: 'gray',
     textAlign: 'center',
   },
 });
