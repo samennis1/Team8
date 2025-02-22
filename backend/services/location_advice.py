@@ -58,7 +58,7 @@ def generate_location(lat1, lon1, lat2, lon2):
 
     output = response.choices[0].message.content
 
-
     print(json.dumps(output, indent=4))
+    return json.dumps(output, indent=4)
 
-generate_location(53.3121, -6.2624, 53.4, -6.8)
+# generate_location(53.3121, -6.2624, 53.4, -6.8)
