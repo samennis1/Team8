@@ -17,8 +17,10 @@ const ChatPage = ({ route }: { route: any }) => {
 
   // Pre-populate with three different message types
   const [messages, setMessages] = useState<Message[]>([
+    { id: '1', text: 'Hi there! Is the item still available?', type: 'received' },
+    { id: '2', text: 'Yes, it is available. I can answer any questions.', type: 'sent' },
     {
-      id: '1',
+      id: '3',
       text: 'AI Assistant: Please provide additional details about your query.',
       type: 'ai',
     },
