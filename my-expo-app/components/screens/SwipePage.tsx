@@ -31,6 +31,9 @@ const deals = [
 export default function SwipePage({ navigation }: { navigation: any }) {
   return (
     <View style={styles.container}>
+      {' '}
+      <Text style={styles.title}>Second Hand Items</Text>
+      <Text style={styles.title}>Swiper</Text>
       <Swiper
         cards={deals}
         renderCard={(card) => (
@@ -52,6 +55,12 @@ export default function SwipePage({ navigation }: { navigation: any }) {
 }
 
 const styles = StyleSheet.create({
+  title: {
+    marginBottom: 16,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1E90FF',
+  },
   container: {
     flex: 1,
     padding: 16,
