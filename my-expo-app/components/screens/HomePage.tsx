@@ -9,9 +9,20 @@ const items = [
     title: 'Macbook Pro 2021',
     image:
       'https://media.donedeal.ie/eyJidWNrZXQiOiJkb25lZGVhbC5pZS1waG90b3MiLCJlZGl0cyI6eyJ0b0Zvcm1hdCI6IndlYnAiLCJyZXNpemUiOnsiZml0IjoiaW5zaWRlIiwid2lkdGgiOjEyMDAsImhlaWdodCI6MTIwMH19LCJrZXkiOiJwaG90b18zMzYwNjU2NzEifQ==?signature=1f9a02c1ba3f29c95f6d3bff52a409f32232178f70d8b30d299e6f2cab636d68',
+    description: 'High-performance Macbook Pro in pristine condition.',
   },
-  { id: '2', title: 'Antique Lamp', image: 'https://source.unsplash.com/random/200x200?lamp' },
-  { id: '3', title: 'Used Bike', image: 'https://source.unsplash.com/random/200x200?bike' },
+  {
+    id: '2',
+    title: 'Antique Lamp',
+    image: 'https://source.unsplash.com/random/200x200?lamp',
+    description: 'A vintage lamp that adds character to any room.',
+  },
+  {
+    id: '3',
+    title: 'Used Bike',
+    image: 'https://source.unsplash.com/random/200x200?bike',
+    description: 'A reliable used bike perfect for daily commuting.',
+  },
 ];
 
 const HomePage = ({ navigation }: { navigation: any }) => {
@@ -58,6 +69,7 @@ const styles = StyleSheet.create({
   itemTitle: {
     marginTop: 8,
     textAlign: 'center',
+    fontSize: 16,
   },
 });
 

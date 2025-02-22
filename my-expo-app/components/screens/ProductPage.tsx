@@ -1,3 +1,4 @@
+import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 
 const ProductPage = ({ route, navigation }: { route: any; navigation: any }) => {
@@ -8,12 +9,10 @@ const ProductPage = ({ route, navigation }: { route: any; navigation: any }) => 
       <Image source={{ uri: item.image }} style={styles.image} />
       <Text style={styles.title}>{item.title}</Text>
       <Text style={styles.description}>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla ac eros eu nunc consequat
-        auctor.
+        {item.description ||
+          'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla ac eros eu nunc consequat auctor.'}
       </Text>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => navigation.navigate('DisplayQR', { item })}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Chat', { item })}>
         <Text style={styles.buttonText}>Chat Now</Text>
       </TouchableOpacity>
     </View>
@@ -25,23 +24,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
     padding: 16,
-    marginTop: 0,
-    marginBottom: 50,
   },
   image: {
-    marginBottom: 16,
     height: 256,
     width: '100%',
     borderRadius: 8,
+    marginBottom: 16,
   },
   title: {
-    marginBottom: 8,
     fontSize: 24,
     fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#1E90FF',
   },
   description: {
-    marginBottom: 16,
+    fontSize: 16,
     color: 'gray',
+    marginBottom: 16,
   },
   button: {
     borderRadius: 8,
@@ -52,6 +51,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: 'bold',
     color: 'white',
+    fontSize: 16,
   },
 });
 

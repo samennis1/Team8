@@ -25,30 +25,18 @@ const AppNavigator = () => {
         <Stack.Screen name="Login" component={LoginPage} options={{ headerShown: false }} />
       ) : (
         <>
-          <Stack.Screen
-            name="Home"
-            component={HomePage}
-            options={{ title: 'Home', headerShown: true }}
-          />
+          <Stack.Screen name="Home" component={HomePage} options={{ title: 'Home' }} />
           <Stack.Screen
             name="Product"
             component={ProductPage}
-            options={{ title: 'Product Details', headerShown: true }}
+            options={{ title: 'Product Details' }}
           />
-          <Stack.Screen
-            name="Chat"
-            component={ChatPage}
-            options={{ title: 'Chat', headerShown: true }}
-          />
-          <Stack.Screen
-            name="ScanQR"
-            component={ScanQRPage}
-            options={{ title: 'Scan QR Code', headerShown: true }}
-          />
+          <Stack.Screen name="Chat" component={ChatPage} options={{ title: 'Chat' }} />
+          <Stack.Screen name="ScanQR" component={ScanQRPage} options={{ title: 'Scan QR Code' }} />
           <Stack.Screen
             name="DisplayQR"
             component={DisplayQRPage}
-            options={{ title: 'Display QR Code', headerShown: true }}
+            options={{ title: 'Display QR Code' }}
           />
         </>
       )}
