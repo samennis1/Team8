@@ -89,7 +89,7 @@ Team8/
 ---
 
 ## 📝 Contribution
-1. Fork the repository 🍴
+1. Fork the repository to your one 🍴
 2. Create a new branch (`git checkout -b feature-name`)
 3. Commit changes (`git commit -m "Added new feature"`)
 4. Push to your branch (`git push origin feature-name`)
