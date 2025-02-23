@@ -1,43 +1,31 @@
-import React, { createContext, useState, ReactNode } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 
-type User = { email: string };
-
-type AuthContextType = {
-  user: User | null;
-  login: (email: string, password: string) => void;
+interface AuthContextType {
+  user: { email: string; isSeller: boolean } | null;
+  login: (email: string, password: string, isSeller: boolean) => Promise<void>;
   logout: () => void;
-  handleLogin: (email: string, password: string) => void;
-};
+}
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  login: () => {},
+  login: async () => {},
   logout: () => {},
-  handleLogin: () => {},
 });
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+interface AuthProviderProps {
+  children: React.ReactNode;
+}
 
-  const handleLogin = (email: string, password: string) => {
-    if (!email || !password) {
-      console.log('Missing credentials');
-      return;
-    }
-    login(email, password);
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<{ email: string; isSeller: boolean } | null>(null);
+
+  const login = async (email: string, password: string, isSeller: boolean) => {
+    setUser({ email, isSeller });
   };
 
-  // Actual login function
-  const login = (email: string, password: string) => {
-    console.log('Logged in with', email);
-    setUser({ email });
+  const logout = () => {
+    setUser(null);
   };
 
-  const logout = () => setUser(null);
-
-  return (
-    <AuthContext.Provider value={{ user, login, logout, handleLogin }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
 };

@@ -1,6 +1,7 @@
+import * as Location from 'expo-location';
 import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import * as Location from 'expo-location';
+
 import { AuthContext } from '../context/AuthContext';
 
 const LoginPage = ({ navigation }: { navigation: any }) => {
@@ -9,60 +10,58 @@ const LoginPage = ({ navigation }: { navigation: any }) => {
   const [password, setPassword] = useState('');
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Request location permission & fetch user location
   useEffect(() => {
     const fetchLocation = async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission denied', 'Location permission is required to proceed.');
         return;
       }
-      let userLocation = await Location.getCurrentPositionAsync({});
-    const locationData = {
-      latitude: userLocation.coords.latitude,
-      longitude: userLocation.coords.longitude,
+      const userLocation = await Location.getCurrentPositionAsync({});
+      const locationData = {
+        latitude: userLocation.coords.latitude,
+        longitude: userLocation.coords.longitude,
+      };
+      setLocation(locationData);
+      console.log('User Location:', locationData);
     };
-    
-    setLocation(locationData);
-    console.log("User Location:", locationData); // ✅ Log the location
-  };
-  fetchLocation();
-}, []);
+    fetchLocation();
+  }, []);
 
-  // Handle user login & send data to backend
   const handleLogin = async () => {
     if (!location) {
       Alert.alert('Location Required', 'Please allow location access before logging in.');
       return;
     }
-  
+
     const userData = {
       email,
       password,
       location,
     };
-  
+
     try {
-      const response = await fetch('http://172.16.16.211:5000/login', { // Replace with your local IP
+      const response = await fetch('http://172.16.16.211:5000/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify(userData),
       });
-  
-      const textResponse = await response.text(); // Read response as text
+
+      const textResponse = await response.text();
       let result;
       try {
-        result = JSON.parse(textResponse); // Try parsing as JSON
+        result = JSON.parse(textResponse);
       } catch (error) {
         console.error('Invalid JSON response:', textResponse);
         throw new Error('Invalid server response');
       }
-  
+
       if (response.ok) {
-        await login(email, password); // Proceed with login
+        const isSeller = result.isSeller;
+        await login(email, password, isSeller);
         navigation.replace('Home');
       } else {
         Alert.alert('Login Failed', result.message || 'Please check your credentials.');
@@ -72,7 +71,7 @@ const LoginPage = ({ navigation }: { navigation: any }) => {
       Alert.alert('Network Error', 'Unable to connect to the server.');
     }
   };
-  
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>

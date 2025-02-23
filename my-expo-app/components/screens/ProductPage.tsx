@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+
+import ApiService from '../../services/ApiService';
 
 const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) => {
   const item = route?.params?.item;
-  
+
   if (!item) {
     return (
       <View style={styles.container}>
@@ -12,21 +14,40 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
     );
   }
 
+  const handleChatNow = async () => {
+    try {
+      let chatId = item.chat_id;
+      console.log(chatId);
+
+      if (!chatId) {
+        const chatData = await ApiService.createChat();
+        chatId = chatData.id;
+
+        await ApiService.updateProduct(item.id, { chat_id: chatId });
+      }
+
+      navigation?.navigate('Chat', { item: { ...item, chat_id: chatId } });
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      Alert.alert('Error', 'Unable to create chat. Please try again later.');
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Image source={{ uri: item.image }} style={styles.image} />
+      <Image source={{ uri: item.image_urls[0] }} style={styles.image} />
       <Text style={styles.title}>{item.title}</Text>
       <Text style={styles.price}>{item.price}</Text>
       <Text style={styles.location}>📍 {item.location}</Text>
-      
+
       <View style={styles.detailsCard}>
         {Object.entries({
-          "Date of Purchase": item.dateOfPurchase,
-          "RAM Size": item.ramSize,
-          "Storage": item.storage,
-          "Appearance Condition": item.condition,
-          "Battery Condition": item.battery,
-          "Warranty": item.warranty || '12 months'
+          'Date of Purchase': item.dateOfPurchase,
+          'RAM Size': item.ramSize,
+          Storage: item.storage,
+          'Appearance Condition': item.condition,
+          'Battery Condition': item.battery,
+          Warranty: item.warranty || '12 months',
         }).map(([key, value]) => (
           <View style={styles.detailContainer} key={key}>
             <Text style={styles.label}>{key}:</Text>
@@ -34,8 +55,8 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
           </View>
         ))}
       </View>
-      
-      <TouchableOpacity style={styles.button} onPress={() => navigation?.navigate('Chat', { item })}>
+
+      <TouchableOpacity style={styles.button} onPress={handleChatNow}>
         <Text style={styles.buttonText}>Chat Now</Text>
       </TouchableOpacity>
     </View>
