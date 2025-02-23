@@ -155,10 +155,10 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
 
   // Existing methods with payment integration
   const handleLocationSuggestion = async () => {
-    if (!user?.isSeller && !isPaid) {
-      Alert.alert('Payment Required', 'Please complete the payment first.');
-      return;
-    }
+    // if (!user?.isSeller && !isPaid) {
+    //   Alert.alert('Payment Required', 'Please complete the payment first.');
+    //   return;
+    // }
 
     try {
       setLoading(true);
@@ -245,6 +245,7 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
         seller: item.sellerEmail || 'Unknown seller',
         image_urls: item.image_urls || [],
       };
+      console.log(payload);
       const result = await ApiService.evaluatePrice(payload);
       setAiPriceEvaluation(result);
     } catch (err) {
