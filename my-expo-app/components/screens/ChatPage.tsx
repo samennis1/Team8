@@ -22,7 +22,7 @@ import ApiService from '../../services/ApiService';
 type Message = {
   id: string;
   text: string;
-  sender: string; // e.g. buyerEmail or sellerEmail
+  sender: string;
 };
 
 type Props = {
@@ -33,38 +33,177 @@ type Props = {
 const AIPurchaseScreen = ({ route, navigation }: Props) => {
   const { user } = useContext(AuthContext);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
-
-  const { item } = route.params; // e.g., { title, desc, price, chat_id, sellerEmail, etc. }
+  const { item } = route.params;
 
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [aiPriceEvaluation, setAiPriceEvaluation] = useState<any>(null);
-
-  // Price negotiation
   const [agreedPrice, setAgreedPrice] = useState<number | null>(null);
   const [showCustomPriceField, setShowCustomPriceField] = useState(false);
   const [priceInput, setPriceInput] = useState('');
-
-  // Location
   const [locationSuggestion, setLocationSuggestion] = useState<any>(null);
-
-  // Payment
   const [isPaid, setIsPaid] = useState(false);
-
-  // OTP
   const [otp, setOtp] = useState('');
-
-  // Fade in animation for the “Price Confirmed!” banner
+  const [otpConfirmed, setOtpConfirmed] = useState(false);
   const bannerOpacity = useRef(new Animated.Value(0)).current;
+
+  // Payment sheet setup
+  const [paymentSheetReady, setPaymentSheetReady] = useState(false);
+
+  useEffect(() => {
+    fetchMessages();
+    fetchAIprice();
+    const intervalId = setInterval(fetchMessages, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const initializePaymentSheet = async (price: number) => {
+    try {
+      const response = await fetch('https://trade-backend.kobos.studio/api/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          line_items: [
+            {
+              price_data: {
+                currency: 'eur',
+                product_data: { name: item.title },
+                unit_amount: price * 100,
+              },
+              quantity: 1,
+            },
+          ],
+          return_url: 'https://example.com/success',
+        }),
+      });
+
+      const { clientSecret, error } = await response.json();
+      if (error || !clientSecret) {
+        throw new Error(error || 'No clientSecret returned from server.');
+      }
+
+      const { error: initError } = await initPaymentSheet({
+        paymentIntentClientSecret: clientSecret,
+        merchantDisplayName: 'Trade Sure',
+        // Optional: Add customer details if available
+        // customerId: '',
+        // customerEphemeralKeySecret: '',
+      });
+
+      if (initError) {
+        console.error('Payment sheet init error:', initError);
+        return false;
+      }
+
+      setPaymentSheetReady(true);
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize payment sheet:', error);
+      return false;
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!agreedPrice) {
+      Alert.alert('Error', 'Please wait for the seller to accept a price first.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const initialized = await initializePaymentSheet(agreedPrice);
+      if (!initialized) {
+        Alert.alert('Error', 'Could not initialize payment. Please try again.');
+        return;
+      }
+
+      const { error: presentError } = await presentPaymentSheet();
+
+      if (presentError) {
+        console.error('Payment canceled or error:', presentError);
+        Alert.alert('Error', presentError.message);
+        return;
+      }
+
+      // Optionally verify PaymentIntent status
+      // const { paymentIntent } = await retrievePaymentIntent(clientSecret);
+      // console.log('PaymentIntent status:', paymentIntent?.status);
+
+      setIsPaid(true);
+      Alert.alert('Success', 'Payment completed successfully!');
+
+      if (item.chat_id) {
+        await ApiService.updateChat(item.chat_id, {
+          'payment.status': 'completed',
+          'payment.amount': agreedPrice,
+          'payment.date': new Date().toISOString(),
+        });
+
+        await handleLocationSuggestion();
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      Alert.alert('Error', 'Payment failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Existing methods with payment integration
+  const handleLocationSuggestion = async () => {
+    if (!user?.isSeller && !isPaid) {
+      Alert.alert('Payment Required', 'Please complete the payment first.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required.');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+
+      const payload = {
+        lat1: location.coords.latitude,
+        lon1: location.coords.longitude,
+        lat2: 53.337902, // Example seller coordinates
+        lon2: -6.257732,
+      };
+
+      const result = await ApiService.generateLocationSuggestions(payload);
+
+      if (result?.data?.length) {
+        setLocationSuggestion(result.data[0]);
+
+        if (item.chat_id) {
+          await ApiService.updateChat(item.chat_id, {
+            'meetup.agreed': true,
+            'meetup.location': result.data[0],
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Location error:', error);
+      Alert.alert('Error', 'Could not generate location suggestion.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // -------------- EFFECTS ---------------
 
-  // On mount, fetch initial chat messages + AI suggestion + user location permission
   useEffect(() => {
-    fetchMessages(); // get last messages
+    fetchMessages();
     fetchAIprice();
-    const intervalId = setInterval(fetchMessages, 5000); // poll for new messages every 5s
+    const intervalId = setInterval(fetchMessages, 5000);
     return () => clearInterval(intervalId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -73,33 +212,23 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
     if (!item.chat_id) return;
     try {
       const data = await ApiService.getChatMessages(item.chat_id);
-      // data: { messages, meetup, otp }
       const { messages = [], meetup, otp: chatOtp } = data;
 
-      // Limit to last 5
       const lastFive = messages.slice(-5);
       setMessages(lastFive);
 
-      // If a price was already accepted
       if (meetup?.price) {
         setAgreedPrice(meetup.price);
       }
-      // If location is already set
       if (meetup?.agreed && meetup?.location) {
         setLocationSuggestion(meetup.location);
       }
-      // If there is an OTP
       if (chatOtp?.token) {
         setOtp(chatOtp.token);
-      }
-      // If the item is paid
-      // (some workflows store a stage, or simply check if OTP exists)
-      // In your original code, you also might mark item as paid in the doc:
-      // e.g. if (meetup.stage === 'paid') setIsPaid(true)
-      // For simplicity, checking the otp might suffice:
-      if (chatOtp?.token) {
-        // optional: check if payment is done
         setIsPaid(true);
+      }
+      if (chatOtp?.confirmed) {
+        setOtpConfirmed(true);
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -143,8 +272,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
     });
   };
 
-  // Only SELLER can accept the last price (found in a message or AI suggestion)
-  // We'll parse the last found price in messages if it matches "€NNN"
   const parseLastProposedPrice = (): number | null => {
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
@@ -160,7 +287,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
     if (!item.chat_id) return;
     try {
       setLoading(true);
-      // If there's a custom typed price, use that. Otherwise parse from last message or AI suggestion
       let finalPrice = 0;
       if (priceInput) {
         finalPrice = parseInt(priceInput, 10);
@@ -176,7 +302,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
       }
       setAgreedPrice(finalPrice);
 
-      // Update Firestore doc
       await ApiService.updateChat(item.chat_id, {
         'meetup.price': finalPrice,
       });
@@ -200,7 +325,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
         text: input.trim(),
       });
       setInput('');
-      // fetch again to show new message
       fetchMessages();
     } catch (err) {
       console.error('Error sending message:', err);
@@ -211,50 +335,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
   };
 
   // -------------- LOCATION SUGGESTION ---------------
-  const handleLocationSuggestion = async () => {
-    try {
-      setLoading(true);
-      // Retrieve buyer location
-      await Location.requestForegroundPermissionsAsync();
-      const location = await Location.getCurrentPositionAsync({});
-      const buyerLat = location.coords.latitude;
-      const buyerLon = location.coords.longitude;
-
-      // For the example, we have a static seller location in code
-      const sellerLat = 53.337902;
-      const sellerLon = -6.257732;
-
-      const payload = {
-        lat1: buyerLat,
-        lon1: buyerLon,
-        lat2: sellerLat,
-        lon2: sellerLon,
-      };
-      const result = await ApiService.generateLocationSuggestions(payload);
-
-      // Maybe take just the first suggestion
-      if (result?.data?.length) {
-        setLocationSuggestion(result.data[0]);
-      }
-      // Mark “meetup.agreed” in the chat doc. This also auto-generates OTP on your back end
-      if (item.chat_id) {
-        await ApiService.updateChat(item.chat_id, {
-          'meetup.agreed': true,
-          'meetup.location': result?.data?.[0],
-        });
-        // The new OTP might be generated
-        const chatInfo = await ApiService.getChatMessages(item.chat_id);
-        if (chatInfo?.otp?.token) {
-          setOtp(chatInfo.otp.token);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      Alert.alert('Error', 'Could not generate location. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // -------------- PAYMENT ---------------
   const handleCheckout = async () => {
@@ -277,7 +357,7 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
         ],
         return_url: 'http://your-server-url.com/success',
       };
-      const response = await fetch('http://localhost:8000/api/create-payment-intent', {
+      const response = await fetch('https://trade-backend.kobos.studio/api/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -295,10 +375,8 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
       if (presentError) {
         console.error('Payment canceled or error:', presentError);
       } else {
-        // Payment success
         Alert.alert('Success', 'Payment complete!');
         setIsPaid(true);
-        // Re-fetch chat doc to get OTP if newly generated
         if (item.chat_id) {
           const chatInfo = await ApiService.getChatMessages(item.chat_id);
           const otpData = chatInfo.otp || { token: '12345' };
@@ -336,6 +414,20 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
     );
   }
 
+  if (otpConfirmed) {
+    return (
+      <View style={styles.completionContainer}>
+        <Text style={styles.completionText}>
+          Transaction completed, funds will now be released to the seller's bank account via Stripe
+          Connect
+        </Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Main')}>
+          <Text style={styles.backButtonText}>Back to Home</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -343,7 +435,18 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
         <Text style={styles.header}>{item.title}</Text>
         <Text style={styles.subHeader}>{item.desc || 'A great item waiting to be yours.'}</Text>
-        {/* AI-suggested Price Banner */}
+        {agreedPrice && !locationSuggestion && !user?.isSeller && !isPaid && (
+          <TouchableOpacity style={styles.payButton} onPress={handlePayment} disabled={loading}>
+            <Text style={styles.payButtonText}>
+              {loading ? 'Processing...' : `Pay €${agreedPrice}`}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {agreedPrice && !locationSuggestion && (user?.isSeller || isPaid) && (
+          <TouchableOpacity style={styles.locationButton} onPress={handleLocationSuggestion}>
+            <Text style={styles.locationButtonText}>Get AI-Recommended Meetup</Text>
+          </TouchableOpacity>
+        )}
         {aiPriceEvaluation && (
           <View style={styles.aiBanner}>
             <Text style={styles.aiBannerText}>
@@ -354,17 +457,14 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
             </Text>
           </View>
         )}
-        {/* Price Confirmed banner */}
         <Animated.View style={[styles.confirmedBanner, { opacity: bannerOpacity }]}>
           <Text style={styles.confirmedBannerText}>Price Confirmed!</Text>
         </Animated.View>
-        {/* If price accepted, show it */}
         {agreedPrice ? (
           <View style={styles.priceConfirmedBox}>
             <Text style={styles.priceConfirmedText}>Agreed Price: €{agreedPrice}</Text>
           </View>
         ) : (
-          // If not accepted, show a small “Seller accept price” area if user isSeller
           <>
             {user?.isSeller ? (
               <>
@@ -404,27 +504,22 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
             )}
           </>
         )}
-        {/* If we have an agreed price, user can get location next (or if location is not set yet) */}
         {agreedPrice && !locationSuggestion && (
           <TouchableOpacity style={styles.locationButton} onPress={handleLocationSuggestion}>
             <Text style={styles.locationButtonText}>Get AI-Recommended Meetup</Text>
           </TouchableOpacity>
         )}
-        {/* Show location suggestion once we have it */}
         {locationSuggestion && (
           <View style={styles.locationBox}>
             <Text style={styles.locationTitle}>Meetup Location:</Text>
             <Text style={styles.locationText}>{locationSuggestion.SuitableLocationName}</Text>
           </View>
         )}
-        {/* Once location is suggested, let buyer pay if not already paid */}
         {locationSuggestion && !isPaid && !user?.isSeller && (
           <TouchableOpacity style={styles.payButton} onPress={handleCheckout}>
             <Text style={styles.payButtonText}>Complete Payment</Text>
           </TouchableOpacity>
         )}
-        // Inside your render method (or return block)
-        {/* If payment is complete, show next step: display or scan QR */}
         {isPaid && user?.isSeller && (
           <TouchableOpacity style={styles.qrButton} onPress={handleShowQR}>
             <Text style={styles.qrButtonText}>Display QR for Buyer</Text>
@@ -432,10 +527,9 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
         )}
         {isPaid && !user?.isSeller && (
           <TouchableOpacity style={styles.qrButton} onPress={handleScanQR}>
-            <Text style={styles.qrButtonText}>Scan Seller’s QR</Text>
+            <Text style={styles.qrButtonText}>Scan Seller's QR</Text>
           </TouchableOpacity>
         )}
-        {/* Minimal Chat - last 5 messages */}
         <Text style={styles.chatHeader}>Chat (last 5 messages):</Text>
         <FlatList
           data={messages}
@@ -452,7 +546,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
           style={styles.chatList}
           contentContainerStyle={{ paddingVertical: 10 }}
         />
-        {/* Input row for new messages */}
         <View style={styles.chatInputContainer}>
           <TextInput
             style={styles.chatInput}
@@ -470,13 +563,36 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
   );
 };
 
-export default AIPurchaseScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FDFDFD',
     paddingTop: 60,
+  },
+  completionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FDFDFD',
+    padding: 20,
+  },
+  completionText: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: '#1C1C1E',
+    marginBottom: 24,
+  },
+  backButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
@@ -646,7 +762,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   chatList: {
-    maxHeight: 200, // limit the space used by chat
+    maxHeight: 200,
     marginBottom: 8,
   },
   chatBubble: {
@@ -691,3 +807,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+export default AIPurchaseScreen;

@@ -29,7 +29,7 @@ export default function ScanQRPage({ route, navigation }: { route: any; navigati
     console.log(otp);
 
     try {
-      const response = await fetch(`http://172.16.16.75:8000/api/chats/${chatId}/confirm-otp`, {
+      const response = await fetch(`https://trade-backend.kobos.studio/api/chats/${chatId}/confirm-otp`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ otp }),
