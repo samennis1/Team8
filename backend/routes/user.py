@@ -106,7 +106,7 @@ def login():
                 except Exception as e:
                     return jsonify({"error": f"Failed to update location: {str(e)}"}), 500
         
-        return jsonify({"message": "Login successful", "token": token}), 200
+        return jsonify({"message": "Login successful", "token": token, "isSeller": user_doc.to_dict()["isSeller"]}), 200
     else:
         # Password does not match
         return jsonify({"error": "Invalid credentials"}), 401
