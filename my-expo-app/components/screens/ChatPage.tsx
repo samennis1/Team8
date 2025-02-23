@@ -46,6 +46,7 @@ const ChatPage = ({ route, navigation }: { route: any; navigation: any }) => {
     const fetchMessages = async () => {
       try {
         const data = await ApiService.getChatMessages(item.chat_id);
+        console.log(item.chat_id, data);
         const { messages, meetup, otp } = data;
         const formattedMessages = messages.map((msg: any) => ({
           ...msg,

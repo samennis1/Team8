@@ -41,7 +41,7 @@ const LoginPage = ({ navigation }: { navigation: any }) => {
     };
 
     try {
-      const response = await fetch('http://172.16.16.211:5000/login', {
+      const response = await fetch('http://172.16.16.75:8000/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

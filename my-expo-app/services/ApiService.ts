@@ -3,7 +3,7 @@ class ApiService {
   private baseUrl: string;
 
   private constructor() {
-    this.baseUrl = 'http://localhost:8000/api';
+    this.baseUrl = 'http://172.16.16.75:8000/api';
   }
 
   public static getInstance(): ApiService {

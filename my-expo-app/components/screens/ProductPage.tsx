@@ -20,24 +20,20 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
 
       if (chatId) {
         try {
-          // Try to get messages for the existing chat ID
           await ApiService.getChatMessages(chatId);
         } catch (error) {
           console.error('Error fetching chat messages:', error);
-          // If fetching messages fails, create a new chat
           const chatData = await ApiService.createChat();
           chatId = chatData.chat_id;
           await ApiService.updateProduct(item.product_id, { chat_id: chatId });
         }
       } else {
-        // If no chat ID exists, create a new chat
         const chatData = await ApiService.createChat();
         chatId = chatData.chat_id;
         await ApiService.updateProduct(item.product_id, { chat_id: chatId });
       }
       console.log(chatId);
 
-      // Navigate to the Chat page with the item and chat ID
       navigation?.navigate('Chat', { item: { ...item, chat_id: chatId } });
     } catch (error) {
       console.error('Error creating chat:', error);
