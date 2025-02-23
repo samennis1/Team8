@@ -59,29 +59,39 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
 
   const initializePaymentSheet = async (price: number) => {
     try {
-      const response = await fetch('https://trade-backend.kobos.studio/create-payment-intent', {
+      const response = await fetch('https://trade-backend.kobos.studio/api/create-payment-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: price * 100, // Convert to cents
-          currency: 'eur',
+          line_items: [{
+            price_data: {
+              currency: 'eur',
+              product_data: { name: item.title },
+              unit_amount: price * 100,
+            },
+            quantity: 1,
+          }],
+          return_url: 'https://example.com/success',
         }),
       });
 
-      const { paymentIntent, ephemeralKey, customer } = await response.json();
+      const { clientSecret, error } = await response.json();
+      if (error || !clientSecret) {
+        throw new Error(error || 'No clientSecret returned from server.');
+      }
 
-      const { error } = await initPaymentSheet({
-        merchantDisplayName: "TradeSure",
-        paymentIntentClientSecret: paymentIntent,
-        defaultBillingDetails: {
-          name: user?.email || '',
-        },
+      const { error: initError } = await initPaymentSheet({
+        paymentIntentClientSecret: clientSecret,
+        merchantDisplayName: "Trade Sure",
+        // Optional: Add customer details if available
+        // customerId: '',
+        // customerEphemeralKeySecret: '',
       });
 
-      if (error) {
-        console.error('Payment sheet init error:', error);
+      if (initError) {
+        console.error('Payment sheet init error:', initError);
         return false;
       }
 
@@ -102,26 +112,27 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
     try {
       setLoading(true);
       
-      // Initialize payment sheet
       const initialized = await initializePaymentSheet(agreedPrice);
       if (!initialized) {
         Alert.alert('Error', 'Could not initialize payment. Please try again.');
         return;
       }
 
-      // Present payment sheet
       const { error: presentError } = await presentPaymentSheet();
       
       if (presentError) {
+        console.error('Payment canceled or error:', presentError);
         Alert.alert('Error', presentError.message);
         return;
       }
 
-      // Payment successful
+      // Optionally verify PaymentIntent status
+      // const { paymentIntent } = await retrievePaymentIntent(clientSecret);
+      // console.log('PaymentIntent status:', paymentIntent?.status);
+
       setIsPaid(true);
       Alert.alert('Success', 'Payment completed successfully!');
 
-      // Update chat with payment status and proceed with location
       if (item.chat_id) {
         await ApiService.updateChat(item.chat_id, {
           'payment.status': 'completed',
@@ -129,7 +140,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
           'payment.date': new Date().toISOString(),
         });
         
-        // Now proceed with location suggestion
         await handleLocationSuggestion();
       }
 
@@ -213,11 +223,8 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
       }
       if (chatOtp?.token) {
         setOtp(chatOtp.token);
-      }
-      if (chatOtp?.token) {
         setIsPaid(true);
       }
-      // Add check for OTP confirmation
       if (chatOtp?.confirmed) {
         setOtpConfirmed(true);
       }
