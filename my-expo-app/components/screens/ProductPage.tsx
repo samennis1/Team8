@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 
 import ApiService from '../../services/ApiService';
 
@@ -35,36 +35,43 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
   };
 
   return (
-    <View style={styles.container}>
-      <Image source={{ uri: item.image_urls[0] }} style={styles.image} />
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.price}>{item.price} €</Text>
-      <Text style={styles.location}>📍 {item.location}</Text>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.container}>
+        <Image source={{ uri: item.image_urls[0] }} style={styles.image} />
+        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.price}>{item.price} €</Text>
+        <Text style={styles.location}>📍 {item.location}</Text>
 
-      <View style={styles.detailsCard}>
-        {Object.entries({
-          'Date of Purchase': item.date_of_purchase,
-          'RAM Size': item.ram_size,
-          Storage: item.storage,
-          'Appearance Condition': item.appearance_cond,
-          'Battery Condition': item.battery_cond,
-          Warranty: item.warranty || '12 months',
-        }).map(([key, value]) => (
-          <View style={styles.detailContainer} key={key}>
-            <Text style={styles.label}>{key}:</Text>
-            <Text style={styles.value}>{value || 'Not specified'}</Text>
-          </View>
-        ))}
+        <View style={styles.detailsCard}>
+          {Object.entries({
+            'Date of Purchase': item.date_of_purchase,
+            'RAM Size': item.ram_size,
+            Storage: item.storage,
+            'Appearance Condition': item.appearance_cond,
+            'Battery Condition': item.battery_cond,
+            Warranty: item.warranty || '12 months',
+          }).map(([key, value]) => (
+            <View style={styles.detailContainer} key={key}>
+              <Text style={styles.label}>{key}:</Text>
+              <Text style={styles.value}>{value || 'Not specified'}</Text>
+            </View>
+          ))}
+        </View>
+
+        <TouchableOpacity style={styles.button} onPress={handleChatNow}>
+          <Text style={styles.buttonText}>Chat Now</Text>
+        </TouchableOpacity>
       </View>
-
-      <TouchableOpacity style={styles.button} onPress={handleChatNow}>
-        <Text style={styles.buttonText}>Chat Now</Text>
-      </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flexGrow: 1,
+    backgroundColor: 'white',
+    padding: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: 'white',

@@ -62,7 +62,7 @@ const LoginPage = ({ navigation }: { navigation: any }) => {
       if (response.ok) {
         const isSeller = result.isSeller;
         await login(email, password, isSeller);
-        navigation.replace('Home');
+        navigation.replace('Main');
       } else {
         Alert.alert('Login Failed', result.message || 'Please check your credentials.');
       }
