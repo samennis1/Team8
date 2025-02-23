@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons'; // Import icons
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -31,18 +32,22 @@ type Item = {
 export default function HomePage({ navigation }: { navigation: any }) {
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const data: Item[] = await ApiService.getProducts();
+      setItems(data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      Alert.alert('Error', 'Unable to fetch products. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const data: Item[] = await ApiService.getProducts();
-        setItems(data);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        Alert.alert('Error', 'Unable to fetch products. Please try again later.');
-      }
-    };
-
     fetchProducts();
   }, []);
 
@@ -65,7 +70,12 @@ export default function HomePage({ navigation }: { navigation: any }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.headerTitle}>Second Hand Items</Text>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Second Hand Items</Text>
+        <TouchableOpacity style={styles.refreshButton} onPress={fetchProducts}>
+          <Ionicons name="refresh" size={24} color="#1E90FF" />
+        </TouchableOpacity>
+      </View>
       <TextInput
         style={styles.searchInput}
         placeholder="Search items..."
@@ -78,6 +88,8 @@ export default function HomePage({ navigation }: { navigation: any }) {
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 16 }}
+        refreshing={loading}
+        onRefresh={fetchProducts}
       />
     </SafeAreaView>
   );
@@ -89,12 +101,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 16,
   },
-  headerTitle: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#1E90FF',
-    textAlign: 'center',
+  },
+  refreshButton: {
+    padding: 8,
   },
   searchInput: {
     height: 40,

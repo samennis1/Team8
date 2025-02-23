@@ -13,6 +13,10 @@ class ApiService {
     return ApiService.instance;
   }
 
+  public async getProduct(productId: string) {
+    return this.request(`/products/${productId}`, 'GET');
+  }
+
   private async request(endpoint: string, method: string, body?: any) {
     const headers = {
       'Content-Type': 'application/json',

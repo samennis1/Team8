@@ -49,15 +49,7 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
   const [otpConfirmed, setOtpConfirmed] = useState(false);
   const bannerOpacity = useRef(new Animated.Value(0)).current;
 
-  // Payment sheet setup
   const [paymentSheetReady, setPaymentSheetReady] = useState(false);
-
-  useEffect(() => {
-    fetchMessages();
-    fetchAIprice();
-    const intervalId = setInterval(fetchMessages, 5000);
-    return () => clearInterval(intervalId);
-  }, []);
 
   const initializePaymentSheet = async (price: number) => {
     try {
@@ -89,9 +81,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
       const { error: initError } = await initPaymentSheet({
         paymentIntentClientSecret: clientSecret,
         merchantDisplayName: 'Trade Sure',
-        // Optional: Add customer details if available
-        // customerId: '',
-        // customerEphemeralKeySecret: '',
       });
 
       if (initError) {
@@ -130,10 +119,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
         return;
       }
 
-      // Optionally verify PaymentIntent status
-      // const { paymentIntent } = await retrievePaymentIntent(clientSecret);
-      // console.log('PaymentIntent status:', paymentIntent?.status);
-
       setIsPaid(true);
       Alert.alert('Success', 'Payment completed successfully!');
 
@@ -154,13 +139,7 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
     }
   };
 
-  // Existing methods with payment integration
   const handleLocationSuggestion = async () => {
-    // if (!user?.isSeller && !isPaid) {
-    //   Alert.alert('Payment Required', 'Please complete the payment first.');
-    //   return;
-    // }
-
     try {
       setLoading(true);
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -175,7 +154,7 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
       const payload = {
         lat1: location.coords.latitude,
         lon1: location.coords.longitude,
-        lat2: 53.337902, // Example seller coordinates
+        lat2: 53.337902,
         lon2: -6.257732,
       };
 
@@ -198,8 +177,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
       setLoading(false);
     }
   };
-
-  // -------------- EFFECTS ---------------
 
   useEffect(() => {
     fetchMessages();
@@ -255,8 +232,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
       setLoading(false);
     }
   };
-
-  // -------------- PRICE NEGOTIATION ---------------
 
   const fadeInBanner = () => {
     Animated.timing(bannerOpacity, {
@@ -317,7 +292,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
     }
   };
 
-  // -------------- CHAT & MESSAGING ---------------
   const handleSendMessage = async () => {
     if (!input.trim() || !item.chat_id) return;
     try {
@@ -336,9 +310,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
     }
   };
 
-  // -------------- LOCATION SUGGESTION ---------------
-
-  // -------------- PAYMENT ---------------
   const handleCheckout = async () => {
     if (!agreedPrice) {
       Alert.alert('Error', 'We do not have a final price yet.');
@@ -393,7 +364,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
     }
   };
 
-  // -------------- QR ---------------
   const handleShowQR = () => {
     if (!otp) {
       Alert.alert('Missing OTP', 'No OTP found. Please confirm payment first.');
@@ -406,7 +376,6 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
     navigation.navigate('ScanQRPage', { chatId: item.chat_id });
   };
 
-  // -------------- RENDER ---------------
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -444,7 +413,7 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
             </Text>
           </TouchableOpacity>
         )}
-        {agreedPrice && !locationSuggestion && (user?.isSeller || isPaid) && (
+        {agreedPrice && !locationSuggestion && isPaid && (
           <TouchableOpacity style={styles.locationButton} onPress={handleLocationSuggestion}>
             <Text style={styles.locationButtonText}>Get AI-Recommended Meetup</Text>
           </TouchableOpacity>
@@ -506,19 +475,21 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
             )}
           </>
         )}
-        {agreedPrice && !locationSuggestion && (
-          <TouchableOpacity style={styles.locationButton} onPress={handleLocationSuggestion}>
-            <Text style={styles.locationButtonText}>Get AI-Recommended Meetup</Text>
-          </TouchableOpacity>
-        )}
-       {locationSuggestion && (
+        {locationSuggestion && (
           <View style={styles.locationBox}>
             <Text style={styles.locationTitle}>Meetup Location:</Text>
             <Text style={styles.locationText}>{locationSuggestion.SuitableLocationName}</Text>
-            <TouchableOpacity 
-              onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${locationSuggestion.SuitableLocationGPSLat},${locationSuggestion.SuitableLocationGPSLong}`)}
-            >
-              <Text style={[styles.locationText, { color: '#007AFF', textDecorationLine: 'underline', marginTop: 4 }]}>
+            <TouchableOpacity
+              onPress={() =>
+                Linking.openURL(
+                  `https://www.google.com/maps/search/?api=1&query=${locationSuggestion.SuitableLocationGPSLat},${locationSuggestion.SuitableLocationGPSLong}`
+                )
+              }>
+              <Text
+                style={[
+                  styles.locationText,
+                  { color: '#007AFF', textDecorationLine: 'underline', marginTop: 4 },
+                ]}>
                 Open in Google Maps
               </Text>
             </TouchableOpacity>

@@ -36,21 +36,15 @@ def create_payment_intent():
         if not line_items:
             return jsonify({'error': 'No line items provided'}), 400
 
-        # For simplicity, assume one line item; in production, sum up all items.
         item = line_items[0]
         amount = item['price_data']['unit_amount'] * item.get('quantity', 1)
         currency = item['price_data']['currency']
-        application_fee_amount = int(amount * 0.1)  # 10% fee for example
+        application_fee_amount = int(amount * 0.1)
 
-        # Create a PaymentIntent with transfer_data to specify the connected account
         payment_intent = stripe.PaymentIntent.create(
             amount=amount,
             currency=currency,
             payment_method_types=['card'],
-            # application_fee_amount=application_fee_amount,
-            # transfer_data={
-            #     'destination': data['connected_account_id'],
-            # },
         )
         return jsonify({'clientSecret': payment_intent.client_secret})
     except Exception as e:
@@ -71,30 +65,8 @@ def create_checkout_session():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-# @stripe_bp.route('/webhook', methods=['POST'])
-# def stripe_webhook():
-#     payload = request.get_data(as_text=True)
-#     sig_header = request.headers.get('Stripe-Signature')
-#     endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
 
-#     try:
-#         event = stripe.Webhook.construct_event(
-#             payload, sig_header, endpoint_secret
-#         )
-#     except ValueError as e:
-#         return jsonify({'error': 'Invalid payload'}), 400
-#     except stripe.error.SignatureVerificationError as e:
-#         return jsonify({'error': 'Invalid signature'}), 400
 
-#     if event['type'] == 'checkout.session.completed':
-#         session = event['data']['object']
-#         handle_checkout_session(session)
 
-#     return jsonify({'status': 'success'})
 
-# def handle_checkout_session(session):
-#     order_id = session['client_reference_id']
-#     update_order_status(order_id, 'paid')
 
-# def update_order_status(order_id, status):
-#     pass

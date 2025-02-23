@@ -16,7 +16,9 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
 
   const handleChatNow = async () => {
     try {
-      let chatId = item.chat_id;
+      const checkChat = await ApiService.getProduct(item.product_id);
+      console.log(checkChat);
+      let chatId = checkChat.chat_id;
 
       // Only create a new chat if one hasn't been set yet.
       if (!chatId) {

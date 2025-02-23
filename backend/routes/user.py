@@ -11,7 +11,6 @@ load_dotenv()
 user_bp = Blueprint("user", __name__)
 db = get_db()
 
-# Secret key for JWT signing – in production, load this from an environment variable
 SECRET_KEY = os.getenv("JWT_KEY")
 
 @user_bp.route('/signup', methods=['POST'])
@@ -33,24 +32,19 @@ def signup():
     if not email or not password:
         return jsonify({"error": "Email and password are required"}), 400
     
-    # Use email (in lowercase) as the unique identifier
     user_id = email.lower()
     user_ref = db.collection("user").document(user_id)
 
-    # Check if the user already exists
     if user_ref.get().exists:
         return jsonify({"error": "User already exists"}), 400
     
-    # Hash the password using bcrypt
     hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-    # Decode to store as a string in Firestore
     hashed_pw_str = hashed_pw.decode('utf-8')
     user_data["password"] = hashed_pw_str
-    user_data["email"] = email.lower()  # Ensure email is stored consistently
+    user_data["email"] = email.lower()
     user_data["location"] = location
     user_data["chats"] = []
     user_data["isSeller"] = False
-    # Create the new user document in Firestore
     try:
         user_ref.set(user_data)
         return jsonify({"message": "User created successfully", "user_id": user_id}), 201
@@ -82,16 +76,13 @@ def login():
 
     user = user_doc.to_dict()
     stored_hashed_pw = user.get("password")
-    # Compare the provided password with the stored hashed password
     if bcrypt.checkpw(password.encode('utf-8'), stored_hashed_pw.encode('utf-8')):
-        # Create a JWT payload with an expiration time (e.g., 2 hour)
         payload = {
             "sub": user_id,
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
         }
         token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
         
-        # If location data is provided, update the user's location in Firestore
         if location and isinstance(location, dict):
             lat = location.get("latitude")
             lon = location.get("longitude")
@@ -108,7 +99,6 @@ def login():
         
         return jsonify({"message": "Login successful", "token": token, "isSeller": user_doc.to_dict()["isSeller"]}), 200
     else:
-        # Password does not match
         return jsonify({"error": "Invalid credentials"}), 401
 
     
@@ -119,7 +109,6 @@ def logout():
     """
     return jsonify({"message": "Logout successful. Please discard your token on the client side."}), 200
 
-# Get user location by id
 @user_bp.route("/api/users/<user_id>/location", methods=["GET"])
 def get_user(user_id):
     user_ref = db.collection("user").document(user_id)

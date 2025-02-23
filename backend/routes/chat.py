@@ -8,7 +8,6 @@ chat_bp = Blueprint("chat", __name__)
 
 db = get_db()
 
-# Get all chats
 @chat_bp.route("/chats", methods=["GET"])
 def get_all_chats():
     chats = []
@@ -21,7 +20,6 @@ def get_all_chats():
     
     return jsonify(chats), 200
 
-# Get chat by id
 @chat_bp.route("/chats/<chat_id>", methods=["GET"])
 def get_chat(chat_id):
     chat_ref = db.collection("chat").document(chat_id)
@@ -32,7 +30,6 @@ def get_chat(chat_id):
     else:
         return jsonify({"error": f"Chat with id {chat_id} not found"}), 404
 
-# Add message to a specific chat
 @chat_bp.route("/chats/<chat_id>/message", methods=["PATCH"])
 def add_message(chat_id):
     message_data = request.get_json()
@@ -55,17 +52,14 @@ def add_message(chat_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Change meetup status
 @chat_bp.route('/chats/<chat_id>/meetup/agree', methods=['PATCH'])
 def agree_meetup(chat_id):
     data = request.get_json()
     if not data:
         return jsonify({"error": "No meetup details provided"}), 400
 
-    # Generate an OTP token automatically
     otp_token = generate_otp_token()
 
-    # Build the update payload
     update_payload = {
         "meetup.agreed": True,
         "meetup.time": data.get("time"),
@@ -75,13 +69,12 @@ def agree_meetup(chat_id):
         "otp.confirmed": False
     }
  
-    # Reference the specific chat document
     chat_ref = db.collection("chat").document(chat_id)
     try:
         chat_ref.update(update_payload)
         return jsonify({
             "message": "Meetup agreed and document updated successfully.",
-            "otp_token": otp_token  # Return OTP for reference (e.g., to send to the buyer)
+            "otp_token": otp_token
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -110,7 +103,6 @@ def create_chat():
 
     return jsonify({"message": "Chat created successfully", "chat_id": chat_ref.id}), 201
 
-# Update chat
 @chat_bp.route('/chats/<chat_id>', methods=['PATCH'])
 def update_chat(chat_id):
     data = request.get_json()
@@ -122,7 +114,6 @@ def update_chat(chat_id):
     for field in data.keys():
         update_payload[field] = data.get(field)
 
-    # Check if meetup.agreed is being set to true
     if data.get("meetup.agreed") == True:
         otp_token = generate_otp_token()
         update_payload["otp.token"] = otp_token
