@@ -89,7 +89,7 @@ def evaluate_condition(image_urls):
     print(json.dumps(result, indent=4))
     return json.dumps(result, indent=4)
 
-evaluate_condition([
-            "https://forums.macrumors.com/attachments/1721668/",
-            "https://www.thesun.co.uk/wp-content/uploads/2020/11/IMG_0577-2.jpg?strip=all&w=960"
-        ])
+# evaluate_condition([
+#             "https://forums.macrumors.com/attachments/1721668/",
+#             "https://www.thesun.co.uk/wp-content/uploads/2020/11/IMG_0577-2.jpg?strip=all&w=960"
+#         ])

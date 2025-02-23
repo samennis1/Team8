@@ -51,3 +51,12 @@ def update_product(product_id):
         return jsonify({"message": "Product information updated successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@product_bp.route('/products', methods=['POST'])
+def create_chat():
+    product_data = request.get_json()
+
+    product_ref = db.collection("product").document()
+    product_ref.set(product_data)
+
+    return jsonify({"message": "Product created successfully", "product_id": product_ref.id}), 201

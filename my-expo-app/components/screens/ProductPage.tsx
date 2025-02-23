@@ -25,8 +25,9 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
 
         await ApiService.updateProduct(item.id, { chat_id: chatId });
       }
+      console.log(chatId);
 
-      navigation?.navigate('Chat', { item: { ...item, chat_id: chatId } });
+      navigation?.navigate('Chat', { item: { ...item, id: chatId } });
     } catch (error) {
       console.error('Error creating chat:', error);
       Alert.alert('Error', 'Unable to create chat. Please try again later.');

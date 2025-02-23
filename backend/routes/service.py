@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
-from services import evaluate_price, generate_location
+from services import evaluate_price, generate_location, evaluate_condition
+from db_config import get_db
 
 service_bp = Blueprint("service", __name__)
 
@@ -43,4 +44,24 @@ def call_evaluate_price():
         return jsonify({"error": "Missing parameters"}), 400
 
     result = evaluate_price(desc, price, seller_name, image_urls)
+    return result, 200
+
+# Evaluate product appearance condition by id
+@service_bp.route('/evaluate-appearance-cond/<product_id>', methods=['POST'])
+def call_evaluate_appearance(product_id):
+    # get product by id
+    db = get_db()
+    product_ref = db.collection("product").document(product_id)
+    product_doc = product_ref.get()
+    image_urls = product_doc.to_dict()["image_urls"]
+    # image_urls = [
+    #     "https://forums.macrumors.com/attachments/1721668/",
+    #     "https://www.thesun.co.uk/wp-content/uploads/2020/11/IMG_0577-2.jpg?strip=all&w=960",
+    # ]
+
+    # Validate that required parameters are provided
+    if image_urls is None:
+        return jsonify({"error": "Missing parameters"}), 400
+
+    result = evaluate_condition(image_urls)
     return result, 200
