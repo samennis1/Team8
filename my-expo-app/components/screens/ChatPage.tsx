@@ -1,3 +1,4 @@
+import { useStripe } from '@stripe/stripe-react-native';
 import React, { useState } from 'react';
 import {
   View,
@@ -14,8 +15,8 @@ type Message = { id: string; text: string; type: 'sent' | 'received' | 'ai' };
 
 const ChatPage = ({ route }: { route: any }) => {
   const { item } = route.params;
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
-  // Pre-populate with three different message types
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', text: 'Hi there! Is the item still available?', type: 'received' },
     { id: '2', text: 'Yes, it is available. I can answer any questions.', type: 'sent' },
@@ -51,18 +52,78 @@ const ChatPage = ({ route }: { route: any }) => {
     );
   };
 
+  const fetchPaymentIntent = async () => {
+    console.log(
+      JSON.stringify({
+        line_items: [
+          {
+            price_data: {
+              currency: 'eur',
+              product_data: { name: item.title },
+              unit_amount: 1000, // assuming item.price is in Euros
+              quantity: 1,
+            },
+          },
+        ],
+        // Optionally, you can pass a return_url for next actions if needed.
+        return_url: 'https://trade-backend.kobos.studio',
+      })
+    );
+    try {
+      const payload = {
+        line_items: [
+          {
+            price_data: {
+              currency: 'eur',
+              product_data: { name: item.title },
+              unit_amount: 10000, // Ensure item.price is defined and numeric
+            },
+            quantity: 1, // Move quantity here
+          },
+        ],
+        return_url: 'https://trade-backend.kobos.studio',
+      };
+
+      console.log(JSON.stringify(payload));
+      const response = await fetch('https://trade-backend.kobos.studio/api/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const { clientSecret, error } = await response.json();
+      if (error) {
+        console.error('Error from backend:', error);
+        return;
+      }
+      const { error: initError } = await initPaymentSheet({
+        paymentIntentClientSecret: clientSecret,
+        merchantDisplayName: 'Trade Sure',
+      });
+      if (initError) {
+        console.error(initError);
+        return;
+      }
+      const { error: presentError } = await presentPaymentSheet();
+      if (presentError) {
+        console.error(presentError);
+      } else {
+        alert('Payment complete!');
+      }
+    } catch (error) {
+      console.error('Error fetching payment intent:', error);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Text style={styles.header}>Chat about {item.title}</Text>
-
-      {/* Static product description */}
       <Text style={styles.itemDescription}>
         {item.description ||
           'This item is in excellent condition and available for immediate sale.'}
       </Text>
-
       <FlatList
         data={messages}
         keyExtractor={(msg) => msg.id}
@@ -70,7 +131,6 @@ const ChatPage = ({ route }: { route: any }) => {
         style={styles.messageList}
         contentContainerStyle={{ paddingVertical: 8 }}
       />
-
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -82,6 +142,9 @@ const ChatPage = ({ route }: { route: any }) => {
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
       </View>
+      <TouchableOpacity style={styles.checkoutButton} onPress={fetchPaymentIntent}>
+        <Text style={styles.checkoutButtonText}>Checkout</Text>
+      </TouchableOpacity>
     </KeyboardAvoidingView>
   );
 };
@@ -165,6 +228,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     fontSize: 16,
+  },
+  checkoutButton: {
+    marginTop: 16,
+    borderRadius: 20,
+    backgroundColor: '#1E90FF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  checkoutButtonText: {
+    fontWeight: 'bold',
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
 
