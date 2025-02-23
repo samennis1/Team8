@@ -88,27 +88,71 @@ def agree_meetup(chat_id):
 
 @chat_bp.route('/chats', methods=['POST'])
 def create_chat():
-    # chat_data = request.get_json()
-    # if not chat_data:
     chat_data = {
-            "meetup": {
-                "agreed": False,
-                "location": {
-                    "lat": "",
-                    "long": ""
-                },
-                "price": "",
-                "time": ""
+        "meetup": {
+            "agreed": False,
+            "location": {
+                "lat": "",
+                "long": ""
             },
-            "messages": [],
-            "otp": {
-                "confirmed": False,
-                "token": ""
-            }
+            "price": "",
+            "time": ""
+        },
+        "messages": [],
+        "otp": {
+            "confirmed": False,
+            "token": ""
         }
+    }
 
     chat_ref = db.collection("chat").document()
     chat_ref.set(chat_data)
 
     return jsonify({"message": "Chat created successfully", "chat_id": chat_ref.id}), 201
 
+# Update chat
+@chat_bp.route('/chats/<chat_id>', methods=['PATCH'])
+def update_chat(chat_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No chat data provided"}), 400
+    
+    update_payload = {}
+
+    for field in data.keys():
+        update_payload[field] = data.get(field)
+
+    # Check if meetup.agreed is being set to true
+    if data.get("meetup.agreed") == True:
+        otp_token = generate_otp_token()
+        update_payload["otp.token"] = otp_token
+        update_payload["otp.confirmed"] = False
+
+    chat_ref = db.collection("chat").document(chat_id)
+    
+    try:
+        chat_ref.update(update_payload)
+        return jsonify({"message": "Chat information updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@chat_bp.route('/chats/<chat_id>/confirm-otp', methods=['PATCH'])
+def confirm_otp(chat_id):
+    data = request.get_json()
+    if not data or 'otp' not in data:
+        return jsonify({"error": "No OTP provided"}), 400
+
+    chat_ref = db.collection("chat").document(chat_id)
+    chat_doc = chat_ref.get()
+
+    if not chat_doc.exists:
+        return jsonify({"error": f"Chat with id {chat_id} not found"}), 404
+
+    chat_data = chat_doc.to_dict()
+    if chat_data['otp']['token'] == data['otp']:
+        chat_ref.update({
+            "otp.confirmed": True
+        })
+        return jsonify({"message": "OTP confirmed successfully"}), 200
+    else:
+        return jsonify({"error": "Invalid OTP"}), 400

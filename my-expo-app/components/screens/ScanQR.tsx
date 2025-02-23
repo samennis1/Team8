@@ -2,7 +2,8 @@ import { CameraView, CameraType, useCameraPermissions, BarcodeScanningResult } f
 import { useState } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export default function App() {
+export default function ScanQRPage({ route, navigation }: { route: any; navigation: any }) {
+  const { chatId } = route.params;
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
 
@@ -23,9 +24,27 @@ export default function App() {
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
   }
 
-  const barcodeScanned = (result: BarcodeScanningResult) => {
+  const barcodeScanned = async (result: BarcodeScanningResult) => {
     const otp = result.data;
     console.log(otp);
+
+    try {
+      const response = await fetch(`http://localhost:8000/api/chats/${chatId}/confirm-otp`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otp }),
+      });
+      const data = await response.json();
+      if (data.error) {
+        console.error('Error confirming OTP:', data.error);
+      } else {
+        console.log('OTP confirmed:', data.message);
+        alert('OTP confirmed successfully!');
+        navigation.goBack();
+      }
+    } catch (error) {
+      console.error('Error confirming OTP:', error);
+    }
   };
 
   return (

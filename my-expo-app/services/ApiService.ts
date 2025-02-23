@@ -3,7 +3,7 @@ class ApiService {
   private baseUrl: string;
 
   private constructor() {
-    this.baseUrl = 'http://172.16.16.211:5000/api';
+    this.baseUrl = 'http://localhost:8000/api';
   }
 
   public static getInstance(): ApiService {
@@ -64,7 +64,7 @@ class ApiService {
   }
 
   public createCheckoutSession(payload: { line_items: any[]; return_url: string }) {
-    return this.request('/stripe/create-checkout-session', 'POST', payload);
+    return this.request('/stripe/create-payment-intent', 'POST', payload);
   }
 
   public updateItem(itemId: string, updates: any) {
@@ -77,6 +77,10 @@ class ApiService {
 
   public updateProduct(productId: string, updates: any) {
     return this.request(`/products/${productId}`, 'PATCH', updates);
+  }
+
+  public updateChat(chatId: string, updates: any) {
+    return this.request(`/chats/${chatId}`, 'PATCH', updates);
   }
 
   public getProducts() {

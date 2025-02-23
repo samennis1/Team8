@@ -5,6 +5,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 export default function DisplayQRPage({ route, navigation }: { route: any; navigation: any }) {
   const { value } = route.params || { value: 'No value provided' };
+  console.log(value);
 
   return (
     <View style={styles.container}>

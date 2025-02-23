@@ -17,15 +17,26 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
   const handleChatNow = async () => {
     try {
       let chatId = item.chat_id;
-      console.log(chatId);
 
-      if (!chatId) {
+      if (chatId) {
+        try {
+          // Try to get messages for the existing chat ID
+          await ApiService.getChatMessages(chatId);
+        } catch (error) {
+          console.error('Error fetching chat messages:', error);
+          // If fetching messages fails, create a new chat
+          const chatData = await ApiService.createChat();
+          chatId = chatData.chat_id;
+          await ApiService.updateProduct(item.product_id, { chat_id: chatId });
+        }
+      } else {
+        // If no chat ID exists, create a new chat
         const chatData = await ApiService.createChat();
-        chatId = chatData.id;
-
-        await ApiService.updateProduct(item.id, { chat_id: chatId });
+        chatId = chatData.chat_id;
+        await ApiService.updateProduct(item.product_id, { chat_id: chatId });
       }
 
+      // Navigate to the Chat page with the item and chat ID
       navigation?.navigate('Chat', { item: { ...item, chat_id: chatId } });
     } catch (error) {
       console.error('Error creating chat:', error);
@@ -42,11 +53,11 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
 
       <View style={styles.detailsCard}>
         {Object.entries({
-          'Date of Purchase': item.dateOfPurchase,
-          'RAM Size': item.ramSize,
+          'Date of Purchase': item.date_of_purchase,
+          'RAM Size': item.ram_size,
           Storage: item.storage,
-          'Appearance Condition': item.condition,
-          'Battery Condition': item.battery,
+          'Appearance Condition': item.appearance_cond,
+          'Battery Condition': item.battery_cond,
           Warranty: item.warranty || '12 months',
         }).map(([key, value]) => (
           <View style={styles.detailContainer} key={key}>

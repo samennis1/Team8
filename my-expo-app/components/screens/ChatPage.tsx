@@ -1,4 +1,5 @@
 import { useStripe } from '@stripe/stripe-react-native';
+import * as Location from 'expo-location';
 import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
@@ -9,6 +10,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  Modal,
+  Alert,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 
 import { AuthContext } from '../../context/AuthContext';
@@ -17,7 +22,7 @@ import ApiService from '../../services/ApiService';
 // static seller due to time constraints
 const sellerLongLat = [53.337902, -6.257732];
 
-type Message = { id: string; text: string; type: 'sent' | 'received' | 'ai' };
+type Message = { id: string; text: string; type: 'sent' | 'received' | 'ai'; sender: string };
 
 const ChatPage = ({ route, navigation }: { route: any; navigation: any }) => {
   const { item } = route.params;
@@ -31,49 +36,82 @@ const ChatPage = ({ route, navigation }: { route: any; navigation: any }) => {
   const [locationProcessed, setLocationProcessed] = useState(false);
   const [agreedPrice, setAgreedPrice] = useState<number | null>(null);
   const [isPaid, setIsPaid] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [evaluationResult, setEvaluationResult] = useState<any>(null);
+  const [buyerLocation, setBuyerLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const data = await ApiService.getChatMessages(item.id);
-        if (data.messages) {
-          setMessages(data.messages);
+        const data = await ApiService.getChatMessages(item.chat_id);
+        const { messages, meetup, otp } = data;
+        const formattedMessages = messages.map((msg: any) => ({
+          ...msg,
+          type: msg.sender === user!.email ? 'sent' : 'received',
+        }));
+        setMessages(formattedMessages);
 
-          data.messages.forEach((message: Message) => {
-            if (message.text.includes('Negotiation Agreed')) {
-              setNegotiationAgreed(true);
-            }
-            if (message.text.includes('Suggested Locations')) {
-              setLocationProcessed(true);
-            }
-            if (!negotiationAgreed && message.text.includes('€')) {
-              evaluatePrice(message.text);
-            }
-          });
-        } else {
-          console.error('No messages found in response:', data);
+        if (meetup.price) {
+          setAgreedPrice(meetup.price);
+          setNegotiationAgreed(true);
+        }
+        if (meetup.agreed) {
+          setLocationProcessed(true);
+        }
+        if (otp.token) {
+          setIsPaid(true);
+        }
+        if (!negotiationAgreed && meetup.price) {
+          evaluatePrice(meetup.price);
         }
       } catch (error) {
         console.error('Error fetching messages:', error);
       }
     };
 
+    const fetchLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission to access location was denied');
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({});
+        setBuyerLocation({
+          lat: location.coords.latitude,
+          lon: location.coords.longitude,
+        });
+      } catch (error) {
+        console.error('Error fetching location:', error);
+      }
+    };
+
     fetchMessages();
+    fetchLocation();
   }, []);
 
-  const evaluatePrice = async (messageText: string) => {
-    const priceMatch = messageText.match(/€(\d+)/);
+  const evaluatePrice = async (priceText: string) => {
+    const priceMatch = priceText.match(/€(\d+)/);
     if (priceMatch) {
       const price = parseInt(priceMatch[1], 10);
       const payload = {
-        desc: item.description,
+        desc: item.desc,
         price,
-        seller: item.sellerName,
-        image_urls: item.imageUrls,
       };
 
       try {
-        const result = await ApiService.evaluatePrice(payload);
+        console.log('Evaluating price', payload);
+        const result = await ApiService.evaluatePrice({
+          desc: item.desc,
+          price,
+          seller: item.seller,
+          image_urls: item.image_urls,
+        });
+        setEvaluationResult(result);
+        setModalVisible(true);
         console.log('Price evaluation result:', result);
       } catch (error) {
         console.error('Error evaluating price:', error);
@@ -82,38 +120,66 @@ const ChatPage = ({ route, navigation }: { route: any; navigation: any }) => {
   };
 
   const generateLocationSuggestions = async () => {
-    const payload = {
-      lat1: item.buyerLat,
-      lon1: item.buyerLon,
-      lat2: sellerLongLat[1],
-      lon2: sellerLongLat[0],
-    };
+    if (!buyerLocation) {
+      Alert.alert('Unable to fetch buyer location');
+      return;
+    }
 
+    setLoadingLocations(true);
+
+    const payload = {
+      lat1: buyerLocation.lat,
+      lon1: buyerLocation.lon,
+      lat2: sellerLongLat[0],
+      lon2: sellerLongLat[1],
+    };
+    console.log(payload);
     try {
       const result = await ApiService.generateLocationSuggestions(payload);
       console.log('Location suggestions:', result);
 
+      const topLocations = result.data.slice(0, 3);
+      setLocationSuggestions(topLocations);
+
       const locationMessage: Message = {
         id: Date.now().toString(),
-        text: `Suggested Locations: ${JSON.stringify(result.data)}`,
+        text: `Suggested Locations:\n\n${topLocations.map((location: any) => location.SuitableLocationName).join('\n')}`,
         type: 'ai',
+        sender: 'system',
       };
       setMessages((prev) => [...prev, locationMessage]);
       setLocationProcessed(true);
+
+      // Mark meetup as agreed and generate OTP
+      await ApiService.updateChat(item.chat_id, { 'meetup.agreed': true });
+      console.log('Meetup agreed and OTP generated');
     } catch (error) {
       console.error('Error generating location suggestions:', error);
+    } finally {
+      setLoadingLocations(false);
     }
   };
 
   const sendMessage = async () => {
     if (input.trim()) {
-      const newMessage: Message = { id: Date.now().toString(), text: input, type: 'sent' };
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: input,
+        type: 'sent',
+        sender: user!.email,
+      };
       setMessages((prev) => [...prev, newMessage]);
       setInput('');
 
       try {
-        await ApiService.sendMessage(item.id, { sender: 'user', text: input });
+        await ApiService.sendMessage(item.chat_id, { sender: user!.email, text: input });
         console.log('Message sent');
+
+        // Check if the message contains a price
+        if (input.match(/€\d+/)) {
+          console.log('Doing it!');
+          evaluatePrice(input);
+        }
       } catch (error) {
         console.error('Error sending message:', error);
       }
@@ -131,7 +197,7 @@ const ChatPage = ({ route, navigation }: { route: any; navigation: any }) => {
         setNegotiationAgreed(true);
 
         try {
-          await ApiService.updateItem(item.id, { agreedPrice: price });
+          await ApiService.updateChat(item.chat_id, { 'meetup.price': price });
           console.log('Agreed price updated');
         } catch (error) {
           console.error('Error updating agreed price:', error);
@@ -142,27 +208,35 @@ const ChatPage = ({ route, navigation }: { route: any; navigation: any }) => {
 
   const fetchPaymentIntent = async () => {
     try {
-      const payload = {
-        line_items: [
-          {
-            price_data: {
-              currency: 'eur',
-              product_data: { name: item.title },
-              unit_amount: agreedPrice! * 100,
+      const response = await fetch('http://localhost:8000/api/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          line_items: [
+            {
+              price_data: {
+                currency: 'eur',
+                product_data: { name: item.title },
+                unit_amount: agreedPrice! * 100, // assuming item.price is in Euros
+              },
+              quantity: 1,
             },
-            quantity: 1,
-          },
-        ],
-        return_url: 'https://trade-backend.kobos.studio',
-      };
-
-      const { id } = await ApiService.createCheckoutSession(payload);
-      const { error } = await initPaymentSheet({
-        paymentIntentClientSecret: id,
+          ],
+          // Optionally, you can pass a return_url for next actions if needed.
+          return_url: 'http://172.16.16.75:8000/success',
+        }),
+      });
+      const { clientSecret, error } = await response.json();
+      if (error) {
+        console.error('Error from backend:', error);
+        return;
+      }
+      const { error: initError } = await initPaymentSheet({
+        paymentIntentClientSecret: clientSecret,
         merchantDisplayName: 'Trade Sure',
       });
-      if (error) {
-        console.error(error);
+      if (initError) {
+        console.error(initError);
         return;
       }
       const { error: presentError } = await presentPaymentSheet();
@@ -173,7 +247,10 @@ const ChatPage = ({ route, navigation }: { route: any; navigation: any }) => {
         setIsPaid(true);
 
         try {
-          await ApiService.updateItem(item.id, { isPaid: true });
+          await ApiService.updateChat(item.chat_id, { 'meetup.agreed': true });
+          const getChat = await ApiService.getChatMessages(item.chat_id);
+          const otpData = getChat.otp ?? '1234';
+          navigation.navigate('DisplayQRPage', { value: otpData.token ?? '12345' });
           console.log('Item marked as paid');
         } catch (error) {
           console.error('Error marking item as paid:', error);
@@ -207,8 +284,7 @@ const ChatPage = ({ route, navigation }: { route: any; navigation: any }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Text style={styles.header}>Chat about {item.title}</Text>
       <Text style={styles.itemDescription}>
-        {item.description ||
-          'This item is in excellent condition and available for immediate sale.'}
+        {item.desc || 'This item is in excellent condition and available for immediate sale.'}
       </Text>
       <FlatList
         data={messages}
@@ -234,8 +310,15 @@ const ChatPage = ({ route, navigation }: { route: any; navigation: any }) => {
         </TouchableOpacity>
       )}
       {negotiationAgreed && !locationProcessed && (
-        <TouchableOpacity style={styles.locationButton} onPress={generateLocationSuggestions}>
-          <Text style={styles.locationButtonText}>Generate Locations</Text>
+        <TouchableOpacity
+          style={styles.locationButton}
+          onPress={generateLocationSuggestions}
+          disabled={loadingLocations}>
+          {loadingLocations ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Text style={styles.locationButtonText}>Generate Locations</Text>
+          )}
         </TouchableOpacity>
       )}
       {negotiationAgreed && locationProcessed && !isPaid && (
@@ -249,10 +332,63 @@ const ChatPage = ({ route, navigation }: { route: any; navigation: any }) => {
         </TouchableOpacity>
       )}
       {isPaid && !user?.isSeller && (
-        <TouchableOpacity style={styles.qrButton} onPress={() => navigation.navigate('ScanQR')}>
+        <TouchableOpacity
+          style={styles.qrButton}
+          onPress={() => navigation.navigate('ScanQRPage', { chatId: item.chat_id })}>
           <Text style={styles.qrButtonText}>Scan QR</Text>
         </TouchableOpacity>
       )}
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={modalVisible}
+        onRequestClose={() => {
+          setModalVisible(!modalVisible);
+        }}>
+        <View style={styles.modalView}>
+          <Text style={styles.modalText}>Price Evaluation</Text>
+          {evaluationResult && (
+            <>
+              <Text>Fair Market Value: €{evaluationResult.fairMarketValue}</Text>
+              <Text>Good Deal: {evaluationResult.goodDeal ? 'Yes' : 'No'}</Text>
+              <Text>Suggestion: {evaluationResult.suggestion}</Text>
+            </>
+          )}
+          <TouchableOpacity
+            style={[styles.button, styles.buttonClose]}
+            onPress={() => setModalVisible(!modalVisible)}>
+            <Text style={styles.textStyle}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={locationSuggestions.length > 0}
+        onRequestClose={() => {
+          setLocationSuggestions([]);
+        }}>
+        <View style={styles.modalView}>
+          <Text style={styles.modalText}>Suggested Locations</Text>
+          {locationSuggestions.map((location, index) => (
+            <View key={index} style={styles.suggestionContainer}>
+              <Text style={styles.suggestionText}>{location.SuitableLocationName}</Text>
+              <Text
+                style={[styles.suggestionLink, { color: 'blue', textDecorationLine: 'underline' }]}
+                onPress={() => Linking.openURL(location.SuitableLocationGoogleMapsLink)}>
+                {location.SuitableLocationGoogleMapsLink}
+              </Text>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={[styles.button, styles.buttonClose]}
+            onPress={() => setLocationSuggestions([])}>
+            <Text style={styles.textStyle}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -388,6 +524,51 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     textAlign: 'center',
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  button: {
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+    marginVertical: 5,
+  },
+  buttonClose: {
+    backgroundColor: '#2196F3',
+  },
+  textStyle: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  modalText: {
+    marginBottom: 15,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  suggestionContainer: {
+    marginVertical: 10,
+  },
+  suggestionText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  suggestionLink: {
+    fontSize: 14,
   },
 });
 
