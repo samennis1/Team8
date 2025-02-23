@@ -14,6 +14,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   FlatList,
+  Linking,
 } from 'react-native';
 
 import { AuthContext } from '../../context/AuthContext';
@@ -510,10 +511,17 @@ const AIPurchaseScreen = ({ route, navigation }: Props) => {
             <Text style={styles.locationButtonText}>Get AI-Recommended Meetup</Text>
           </TouchableOpacity>
         )}
-        {locationSuggestion && (
+       {locationSuggestion && (
           <View style={styles.locationBox}>
             <Text style={styles.locationTitle}>Meetup Location:</Text>
             <Text style={styles.locationText}>{locationSuggestion.SuitableLocationName}</Text>
+            <TouchableOpacity 
+              onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${locationSuggestion.SuitableLocationGPSLat},${locationSuggestion.SuitableLocationGPSLong}`)}
+            >
+              <Text style={[styles.locationText, { color: '#007AFF', textDecorationLine: 'underline', marginTop: 4 }]}>
+                Open in Google Maps
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
         {locationSuggestion && !isPaid && !user?.isSeller && (
