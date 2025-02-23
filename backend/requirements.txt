@@ -45,3 +45,4 @@ wheel==0.45.1
 openai==1.64.0
 stripe==11.5.0
 gunicorn==23.0.0
+bcrypt==4.2.0
