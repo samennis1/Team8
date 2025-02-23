@@ -18,22 +18,15 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
     try {
       let chatId = item.chat_id;
 
-      if (chatId) {
-        try {
-          await ApiService.getChatMessages(chatId);
-        } catch (error) {
-          console.error('Error fetching chat messages:', error);
-          const chatData = await ApiService.createChat();
-          chatId = chatData.chat_id;
-          await ApiService.updateProduct(item.product_id, { chat_id: chatId });
-        }
-      } else {
+      // Only create a new chat if one hasn't been set yet.
+      if (!chatId) {
         const chatData = await ApiService.createChat();
         chatId = chatData.chat_id;
+        // Update the product record with the new chat id
         await ApiService.updateProduct(item.product_id, { chat_id: chatId });
       }
-      console.log(chatId);
 
+      // Now navigate to the Chat page with the consistent chat id.
       navigation?.navigate('Chat', { item: { ...item, chat_id: chatId } });
     } catch (error) {
       console.error('Error creating chat:', error);

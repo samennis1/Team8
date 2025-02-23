@@ -31,7 +31,6 @@ const deals = [
 export default function SwipePage({ navigation }: { navigation: any }) {
   return (
     <View style={styles.container}>
-      {' '}
       <Text style={styles.title}>Second Hand Items</Text>
       <Text style={styles.title}>Swiper</Text>
       <Swiper

@@ -10,12 +10,12 @@ export default function DisplayQRPage({ route, navigation }: { route: any; navig
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Generated QR</Text>
-      <Animated.View
+      {/* <Animated.View
         entering={FadeIn.duration(500)}
-        exiting={FadeOut.duration(500)}
-        style={styles.qrContainer}>
+        exiting={FadeOut.duration(500)} */}
+      <View style={styles.qrContainer}>
         <QRCode value={value} size={200} />
-      </Animated.View>
+      </View>
       <Text style={styles.valueText}>{value}</Text>
       <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
         <Text style={styles.buttonText}>Go Back</Text>

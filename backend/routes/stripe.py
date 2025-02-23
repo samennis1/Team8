@@ -12,7 +12,7 @@ def create_connect_account():
     try:
         account = stripe.Account.create(
             type='express',
-            country='US',
+            country='IE',
             email=request.json['email'],
             capabilities={
                 'transfers': {'requested': True},
@@ -40,17 +40,21 @@ def create_payment_intent():
         item = line_items[0]
         amount = item['price_data']['unit_amount'] * item.get('quantity', 1)
         currency = item['price_data']['currency']
+        application_fee_amount = int(amount * 0.1)  # 10% fee for example
 
-        # Create a PaymentIntent without specifying a customer.
+        # Create a PaymentIntent with transfer_data to specify the connected account
         payment_intent = stripe.PaymentIntent.create(
             amount=amount,
             currency=currency,
             payment_method_types=['card'],
+            # application_fee_amount=application_fee_amount,
+            # transfer_data={
+            #     'destination': data['connected_account_id'],
+            # },
         )
         return jsonify({'clientSecret': payment_intent.client_secret})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-    
     
 @stripe_bp.route('/create-checkout-session', methods=['POST'])
 def create_checkout_session():

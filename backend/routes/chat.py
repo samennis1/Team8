@@ -74,7 +74,7 @@ def agree_meetup(chat_id):
         "otp.token": otp_token,
         "otp.confirmed": False
     }
-
+ 
     # Reference the specific chat document
     chat_ref = db.collection("chat").document(chat_id)
     try:
