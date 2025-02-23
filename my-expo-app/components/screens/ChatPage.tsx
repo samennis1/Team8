@@ -1,5 +1,5 @@
 import { useStripe } from '@stripe/stripe-react-native';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -11,27 +11,176 @@ import {
   StyleSheet,
 } from 'react-native';
 
+import { AuthContext } from '../../context/AuthContext';
+import ApiService from '../../services/ApiService';
+
+// static seller due to time constraints
+const sellerLongLat = [53.337902, -6.257732];
+
 type Message = { id: string; text: string; type: 'sent' | 'received' | 'ai' };
 
-const ChatPage = ({ route }: { route: any }) => {
+const ChatPage = ({ route, navigation }: { route: any; navigation: any }) => {
   const { item } = route.params;
+  const { user } = useContext(AuthContext);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  console.log(user);
 
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', text: 'Hi there! Is the item still available?', type: 'received' },
-    { id: '2', text: 'Yes, it is available. I can answer any questions.', type: 'sent' },
-    {
-      id: '3',
-      text: 'AI Assistant: Please provide additional details about your query.',
-      type: 'ai',
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [negotiationAgreed, setNegotiationAgreed] = useState(false);
+  const [locationProcessed, setLocationProcessed] = useState(false);
+  const [agreedPrice, setAgreedPrice] = useState<number | null>(null);
+  const [isPaid, setIsPaid] = useState(false);
 
-  const sendMessage = () => {
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const data = await ApiService.getChatMessages(item.id);
+        if (data.messages) {
+          setMessages(data.messages);
+
+          data.messages.forEach((message: Message) => {
+            if (message.text.includes('Negotiation Agreed')) {
+              setNegotiationAgreed(true);
+            }
+            if (message.text.includes('Suggested Locations')) {
+              setLocationProcessed(true);
+            }
+            if (!negotiationAgreed && message.text.includes('€')) {
+              evaluatePrice(message.text);
+            }
+          });
+        } else {
+          console.error('No messages found in response:', data);
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      }
+    };
+
+    fetchMessages();
+  }, []);
+
+  const evaluatePrice = async (messageText: string) => {
+    const priceMatch = messageText.match(/€(\d+)/);
+    if (priceMatch) {
+      const price = parseInt(priceMatch[1], 10);
+      const payload = {
+        desc: item.description,
+        price,
+        seller: item.sellerName,
+        image_urls: item.imageUrls,
+      };
+
+      try {
+        const result = await ApiService.evaluatePrice(payload);
+        console.log('Price evaluation result:', result);
+      } catch (error) {
+        console.error('Error evaluating price:', error);
+      }
+    }
+  };
+
+  const generateLocationSuggestions = async () => {
+    const payload = {
+      lat1: item.buyerLat,
+      lon1: item.buyerLon,
+      lat2: sellerLongLat[1],
+      lon2: sellerLongLat[0],
+    };
+
+    try {
+      const result = await ApiService.generateLocationSuggestions(payload);
+      console.log('Location suggestions:', result);
+
+      const locationMessage: Message = {
+        id: Date.now().toString(),
+        text: `Suggested Locations: ${JSON.stringify(result.data)}`,
+        type: 'ai',
+      };
+      setMessages((prev) => [...prev, locationMessage]);
+      setLocationProcessed(true);
+    } catch (error) {
+      console.error('Error generating location suggestions:', error);
+    }
+  };
+
+  const sendMessage = async () => {
     if (input.trim()) {
-      setMessages((prev) => [...prev, { id: Date.now().toString(), text: input, type: 'sent' }]);
+      const newMessage: Message = { id: Date.now().toString(), text: input, type: 'sent' };
+      setMessages((prev) => [...prev, newMessage]);
       setInput('');
+
+      try {
+        await ApiService.sendMessage(item.id, { sender: 'user', text: input });
+        console.log('Message sent');
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
+    }
+  };
+
+  const agreePrice = async () => {
+    const priceMessages = messages.filter((message) => message.text.includes('€'));
+    if (priceMessages.length > 0) {
+      const lastPriceMessage = priceMessages[priceMessages.length - 1];
+      const priceMatch = lastPriceMessage.text.match(/€(\d+)/);
+      if (priceMatch) {
+        const price = parseInt(priceMatch[1], 10);
+        setAgreedPrice(price);
+        setNegotiationAgreed(true);
+
+        try {
+          await ApiService.updateItem(item.id, { agreedPrice: price });
+          console.log('Agreed price updated');
+        } catch (error) {
+          console.error('Error updating agreed price:', error);
+        }
+      }
+    }
+  };
+
+  const fetchPaymentIntent = async () => {
+    try {
+      const payload = {
+        line_items: [
+          {
+            price_data: {
+              currency: 'eur',
+              product_data: { name: item.title },
+              unit_amount: agreedPrice! * 100,
+            },
+            quantity: 1,
+          },
+        ],
+        return_url: 'https://trade-backend.kobos.studio',
+      };
+
+      const { id } = await ApiService.createCheckoutSession(payload);
+      const { error } = await initPaymentSheet({
+        paymentIntentClientSecret: id,
+        merchantDisplayName: 'Trade Sure',
+      });
+      if (error) {
+        console.error(error);
+        return;
+      }
+      const { error: presentError } = await presentPaymentSheet();
+      if (presentError) {
+        console.error(presentError);
+      } else {
+        alert('Payment complete!');
+        setIsPaid(true);
+
+        try {
+          await ApiService.updateItem(item.id, { isPaid: true });
+          console.log('Item marked as paid');
+        } catch (error) {
+          console.error('Error marking item as paid:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching payment intent:', error);
     }
   };
 
@@ -50,69 +199,6 @@ const ChatPage = ({ route }: { route: any }) => {
         <Text style={textStyle}>{item.text}</Text>
       </View>
     );
-  };
-
-  const fetchPaymentIntent = async () => {
-    console.log(
-      JSON.stringify({
-        line_items: [
-          {
-            price_data: {
-              currency: 'eur',
-              product_data: { name: item.title },
-              unit_amount: 1000, // assuming item.price is in Euros
-              quantity: 1,
-            },
-          },
-        ],
-        // Optionally, you can pass a return_url for next actions if needed.
-        return_url: 'https://trade-backend.kobos.studio',
-      })
-    );
-    try {
-      const payload = {
-        line_items: [
-          {
-            price_data: {
-              currency: 'eur',
-              product_data: { name: item.title },
-              unit_amount: 10000, // Ensure item.price is defined and numeric
-            },
-            quantity: 1, // Move quantity here
-          },
-        ],
-        return_url: 'https://trade-backend.kobos.studio',
-      };
-
-      console.log(JSON.stringify(payload));
-      const response = await fetch('https://trade-backend.kobos.studio/api/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const { clientSecret, error } = await response.json();
-      if (error) {
-        console.error('Error from backend:', error);
-        return;
-      }
-      const { error: initError } = await initPaymentSheet({
-        paymentIntentClientSecret: clientSecret,
-        merchantDisplayName: 'Trade Sure',
-      });
-      if (initError) {
-        console.error(initError);
-        return;
-      }
-      const { error: presentError } = await presentPaymentSheet();
-      if (presentError) {
-        console.error(presentError);
-      } else {
-        alert('Payment complete!');
-      }
-    } catch (error) {
-      console.error('Error fetching payment intent:', error);
-    }
   };
 
   return (
@@ -142,9 +228,31 @@ const ChatPage = ({ route }: { route: any }) => {
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.checkoutButton} onPress={fetchPaymentIntent}>
-        <Text style={styles.checkoutButtonText}>Checkout</Text>
-      </TouchableOpacity>
+      {!negotiationAgreed && (
+        <TouchableOpacity style={styles.agreeButton} onPress={agreePrice}>
+          <Text style={styles.agreeButtonText}>Agree Price</Text>
+        </TouchableOpacity>
+      )}
+      {negotiationAgreed && !locationProcessed && (
+        <TouchableOpacity style={styles.locationButton} onPress={generateLocationSuggestions}>
+          <Text style={styles.locationButtonText}>Generate Locations</Text>
+        </TouchableOpacity>
+      )}
+      {negotiationAgreed && locationProcessed && !isPaid && (
+        <TouchableOpacity style={styles.checkoutButton} onPress={fetchPaymentIntent}>
+          <Text style={styles.checkoutButtonText}>Checkout</Text>
+        </TouchableOpacity>
+      )}
+      {isPaid && user?.isSeller && (
+        <TouchableOpacity style={styles.qrButton} onPress={() => navigation.navigate('DisplayQR')}>
+          <Text style={styles.qrButtonText}>Display QR</Text>
+        </TouchableOpacity>
+      )}
+      {isPaid && !user?.isSeller && (
+        <TouchableOpacity style={styles.qrButton} onPress={() => navigation.navigate('ScanQR')}>
+          <Text style={styles.qrButtonText}>Scan QR</Text>
+        </TouchableOpacity>
+      )}
     </KeyboardAvoidingView>
   );
 };
@@ -229,6 +337,32 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
+  agreeButton: {
+    marginTop: 16,
+    borderRadius: 20,
+    backgroundColor: '#32CD32',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  agreeButtonText: {
+    fontWeight: 'bold',
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  locationButton: {
+    marginTop: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFA500',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  locationButtonText: {
+    fontWeight: 'bold',
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   checkoutButton: {
     marginTop: 16,
     borderRadius: 20,
@@ -237,6 +371,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   checkoutButtonText: {
+    fontWeight: 'bold',
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  qrButton: {
+    marginTop: 16,
+    borderRadius: 20,
+    backgroundColor: '#1E90FF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  qrButtonText: {
     fontWeight: 'bold',
     color: 'white',
     fontSize: 16,
