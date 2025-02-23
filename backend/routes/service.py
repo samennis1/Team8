@@ -20,7 +20,7 @@ def call_generate_location():
         return jsonify({"error": "Missing parameters"}), 400
 
     result = generate_location(lat1, lon1, lat2, lon2)
-    return jsonify({"result": result}), 200
+    return result, 200
 
 @service_bp.route('/evaluate-price', methods=['POST'])
 def call_evaluate_price():
@@ -31,10 +31,16 @@ def call_evaluate_price():
 
     desc = data.get("desc")
     price = data.get("price")
+    seller_name = data.get("seller")
+    image_urls = data.get("image_urls")
+    # image_urls = [
+    #     "https://forums.macrumors.com/attachments/1721668/",
+    #     "https://www.thesun.co.uk/wp-content/uploads/2020/11/IMG_0577-2.jpg?strip=all&w=960",
+    # ]
 
     # Validate that required parameters are provided
-    if desc is None or price is None:
+    if desc is None or price is None or image_urls is None:
         return jsonify({"error": "Missing parameters"}), 400
 
-    result = evaluate_price(desc, price)
-    return jsonify({"result": result}), 200
+    result = evaluate_price(desc, price, seller_name, image_urls)
+    return result, 200
