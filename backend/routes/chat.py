@@ -88,9 +88,24 @@ def agree_meetup(chat_id):
 
 @chat_bp.route('/chats', methods=['POST'])
 def create_chat():
-    chat_data = request.get_json()
-    if not chat_data:
-        return jsonify({"error": "Invalid request, no JSON payload provided"}), 400
+    # chat_data = request.get_json()
+    # if not chat_data:
+    chat_data = {
+            "meetup": {
+                "agreed": False,
+                "location": {
+                    "lat": "",
+                    "long": ""
+                },
+                "price": "",
+                "time": ""
+            },
+            "messages": [],
+            "otp": {
+                "confirmed": False,
+                "token": ""
+            }
+        }
 
     chat_ref = db.collection("chat").document()
     chat_ref.set(chat_data)
