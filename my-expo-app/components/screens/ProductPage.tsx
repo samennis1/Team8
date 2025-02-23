@@ -35,6 +35,7 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
         chatId = chatData.chat_id;
         await ApiService.updateProduct(item.product_id, { chat_id: chatId });
       }
+      console.log(chatId);
 
       // Navigate to the Chat page with the item and chat ID
       navigation?.navigate('Chat', { item: { ...item, chat_id: chatId } });
@@ -48,7 +49,7 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
     <View style={styles.container}>
       <Image source={{ uri: item.image_urls[0] }} style={styles.image} />
       <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.price}>{item.price}</Text>
+      <Text style={styles.price}>{item.price} €</Text>
       <Text style={styles.location}>📍 {item.location}</Text>
 
       <View style={styles.detailsCard}>
