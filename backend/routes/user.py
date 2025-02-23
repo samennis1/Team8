@@ -21,12 +21,15 @@ def signup():
     Expects a JSON payload with 'email' and 'password'.
     Uses the email (converted to lowercase) as the unique identifier.
     """
+    print(request)
     user_data = request.get_json()
     if not user_data:
         return jsonify({"error": "No user data provided"}), 400
 
     email = user_data.get("email")
     password = user_data.get("password")
+    location = user_data.get("location")
+
     if not email or not password:
         return jsonify({"error": "Email and password are required"}), 400
     
@@ -44,7 +47,9 @@ def signup():
     hashed_pw_str = hashed_pw.decode('utf-8')
     user_data["password"] = hashed_pw_str
     user_data["email"] = email.lower()  # Ensure email is stored consistently
-
+    user_data["location"] = location
+    user_data["chats"] = []
+    user_data["isSeller"] = False
     # Create the new user document in Firestore
     try:
         user_ref.set(user_data)
@@ -65,11 +70,13 @@ def login():
 
     email = data.get("email")
     password = data.get("password")
+    location = data.get("location")
     if not email or not password:
         return jsonify({"error": "Email and password are required"}), 400
 
     user_id = email.lower()
-    user_doc = db.collection("user").document(user_id).get()
+    user_ref = db.collection("user").document(user_id)
+    user_doc = user_ref.get()
     if not user_doc.exists:
         return jsonify({"error": "User does not exist"}), 404
 
@@ -83,6 +90,28 @@ def login():
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
         }
         token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+        # Update user location if it changed
+        if location != data["location"]:
+            data["location"] = location
+            user_ref.set(data)
+            print("user location updated!")
+        
+        # If location data is provided, update the user's location in Firestore
+        if location and isinstance(location, dict):
+            lat = location.get("latitude")
+            lon = location.get("longitude")
+            if lat is not None and lon is not None:
+                try:
+                    db.collection("user").document(user_id).update({
+                        "location": {
+                            "lattitude": lat,
+                            "longitude": lon
+                        }
+                    })
+                except Exception as e:
+                    return jsonify({"error": f"Failed to update location: {str(e)}"}), 500
+        
         return jsonify({"message": "Login successful", "token": token}), 200
     else:
         # Password does not match
