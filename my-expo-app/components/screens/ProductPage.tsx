@@ -37,16 +37,16 @@ const ProductPage = ({ route, navigation }: { route?: any; navigation?: any }) =
     <View style={styles.container}>
       <Image source={{ uri: item.image_urls[0] }} style={styles.image} />
       <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.price}>{item.price}</Text>
+      <Text style={styles.price}>{item.price} €</Text>
       <Text style={styles.location}>📍 {item.location}</Text>
 
       <View style={styles.detailsCard}>
         {Object.entries({
-          'Date of Purchase': item.dateOfPurchase,
-          'RAM Size': item.ramSize,
+          'Date of Purchase': item.date_of_purchase,
+          'RAM Size': item.ram_size,
           Storage: item.storage,
-          'Appearance Condition': item.condition,
-          'Battery Condition': item.battery,
+          'Appearance Condition': item.appearance_cond,
+          'Battery Condition': item.battery_cond,
           Warranty: item.warranty || '12 months',
         }).map(([key, value]) => (
           <View style={styles.detailContainer} key={key}>
