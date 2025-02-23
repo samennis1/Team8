@@ -90,12 +90,6 @@ def login():
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
         }
         token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
-
-        # Update user location if it changed
-        if location != data["location"]:
-            data["location"] = location
-            user_ref.set(data)
-            print("user location updated!")
         
         # If location data is provided, update the user's location in Firestore
         if location and isinstance(location, dict):
