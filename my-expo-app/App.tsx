@@ -1,6 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import React, { useContext } from 'react';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import React from 'react';
 
 import AppTabs from './components/AppTabs';
 import LoginPage from './components/LoginPage';
@@ -11,7 +12,7 @@ import { AuthProvider, AuthContext } from './context/AuthContext';
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = React.useContext(AuthContext);
   return (
     <Stack.Navigator
       screenOptions={{
@@ -37,11 +38,14 @@ const AppNavigator = () => {
 };
 
 export default function App() {
+  const stripePublishableKey = process.env.EXPO_PUBLIC_STRIPE;
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <AppNavigator />
-      </NavigationContainer>
-    </AuthProvider>
+    <StripeProvider publishableKey={stripePublishableKey}>
+      <AuthProvider>
+        <NavigationContainer>
+          <AppNavigator />
+        </NavigationContainer>
+      </AuthProvider>
+    </StripeProvider>
   );
 }
