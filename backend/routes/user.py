@@ -118,3 +118,14 @@ def logout():
     Log out a user.
     """
     return jsonify({"message": "Logout successful. Please discard your token on the client side."}), 200
+
+# Get user location by id
+@user_bp.route("/api/users/<user_id>/location", methods=["GET"])
+def get_user(user_id):
+    user_ref = db.collection("user").document(user_id)
+    user_doc = user_ref.get()
+    
+    if user_doc.exists:
+        return jsonify(user_doc.to_dict()["location"]), 200
+    else:
+        return jsonify({"error": f"Chat with id {user_id} not found"}), 404
